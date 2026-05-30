@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>*{margin:0;padding:0}html,body{width:100%;height:100%;overflow:hidden;background:#000}canvas{position:fixed;top:0;left:0;width:100vw;height:100vh}</style>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.183.0/build/three.webgpu.js","three/webgpu":"https://unpkg.com/three@0.183.0/build/three.webgpu.js","three/tsl":"https://unpkg.com/three@0.183.0/build/three.tsl.js","three/addons/":"https://unpkg.com/three@0.183.0/examples/jsm/"}}</script>
+</head><body>
+<div style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1;pointer-events:none;
+background:radial-gradient(ellipse at 50% 55%,rgba(10,14,23,.82) 25%,rgba(10,14,23,.5) 50%,rgba(10,14,23,.15) 75%,transparent 95%)"></div>
+<script type="module">
+import * as THREE from 'three/webgpu';
+import {Fn,uniform,float,vec3,instancedArray,instanceIndex,uv,positionGeometry,positionWorld,sin,cos,pow,smoothstep,mix,sqrt,select,hash,time,deltaTime,PI,mx_noise_float,pass,mrt,output,transformedNormalView} from 'three/tsl';
+import {dof} from 'three/addons/tsl/display/DepthOfFieldNode.js';
+const BC=120000,FS=30;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color('#000000');
+scene.fog=new THREE.FogExp2('#000000',.035);
+const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,.1,100);
+camera.position.set(-2.8,9,20);camera.lookAt(0,0,0);
+const renderer=new THREE.WebGPURenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1;
+document.body.appendChild(renderer.domElement);
+await renderer.init();
+const bladeData=instancedArray(BC,'vec4'),bendState=instancedArray(BC,'vec4'),bladeBound=instancedArray(BC,'float');
+const windSpeed=uniform(1.3),windAmplitude=uniform(.21),bladeWidth=uniform(4),bladeTipWidth=uniform(.19),bladeHeight=uniform(1.6),bladeHeightVariation=uniform(.5),bladeLean=uniform(1.1),noiseAmplitude=uniform(1.85),noiseFrequency=uniform(.3),noise2Amplitude=uniform(.2),noise2Frequency=uniform(15),bladeColorVariation=uniform(.93),grassDensity=uniform(1);
+const fogStart=uniform(7),fogEnd=uniform(12),fogIntensity=uniform(1),fogColor=uniform(new THREE.Color('#000'));
+const bladeBaseColor=uniform(new THREE.Color().setRGB(.004,.013,.001));
+const bladeTipColor=uniform(new THREE.Color().setRGB(.577,.479,.051));
+const goldenTipColor=uniform(new THREE.Color().setRGB(.658,.479,.040));
+const greenTipColor=uniform(new THREE.Color().setRGB(.068,.195,.007));
+const midColor=uniform(new THREE.Color().setRGB(.026,.076,.004));
+const groundColor=uniform(new THREE.Color('#000'));
+const backgroundColor=uniform(new THREE.Color('#000'));
+const noise2D=Fn(([x,z])=>mx_noise_float(vec3(x,float(0),z)).mul(.5).add(.5));
+const computeInit=Fn(()=>{const b=bladeData.element(instanceIndex);const col=instanceIndex.mod(283);const row=instanceIndex.div(283);const jx=hash(instanceIndex).sub(.5);const jz=hash(instanceIndex.add(7919)).sub(.5);const wx=col.toFloat().add(jx).div(float(283)).sub(.5).mul(FS);const wz=row.toFloat().add(jz).div(float(283)).sub(.5).mul(FS);b.x.assign(wx);b.y.assign(wz);b.z.assign(hash(instanceIndex.add(1337)).mul(PI.mul(2)));const n1=noise2D(wx.mul(noiseFrequency),wz.mul(noiseFrequency));const n2=noise2D(wx.mul(noiseFrequency.mul(noise2Frequency)).add(50),wz.mul(noiseFrequency.mul(noise2Frequency)).add(50));b.w.assign(n1.mul(noiseAmplitude).sub(noise2Amplitude).add(n2.mul(noise2Amplitude).mul(2)).max(0));const dist=sqrt(wx.mul(wx).add(wz.mul(wz)));const eN=noise2D(wx.mul(.25).add(100),wz.mul(.25).add(100));const mR=float(12).add(eN.sub(.5).mul(6));bladeBound.element(instanceIndex).assign(select(float(1).sub(smoothstep(mR.sub(1.5),mR,dist)).lessThan(.05),float(0),float(1).sub(smoothstep(mR.sub(1.5),mR,dist))))})().compute(BC);
+const computeUpdate=Fn(()=>{const b=bladeData.element(instanceIndex);const bn=bendState.element(instanceIndex);const w1=sin(b.x.mul(.35).add(b.y.mul(.12)).add(time.mul(windSpeed)));const w2=sin(b.x.mul(.18).add(b.y.mul(.28)).add(time.mul(windSpeed.mul(.67))).add(1.7));const wx=w1.add(w2).mul(windAmplitude);const wz=w1.sub(w2).mul(windAmplitude.mul(.55));const lw=deltaTime.mul(4).saturate();bn.x.assign(mix(bn.x,wx,lw));bn.y.assign(mix(bn.y,wz,lw))})().compute(BC);
+function createBladeGeo(){const s=5,W=.055,H=1;const v=[],n=[],u=[],idx=[];for(let i=0;i<=s;i++){const t=i/s,y=t*H,hw=W*.5*(1-t*.82);v.push(-hw,y,0,hw,y,0);n.push(0,0,1,0,0,1);u.push(0,t,1,t)}for(let i=0;i<s;i++){const b=i*2;idx.push(b,b+1,b+2,b+1,b+3,b+2)}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(n,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(u,2));g.setIndex(idx);return g}
+const grassMat=new THREE.MeshBasicNodeMaterial({side:THREE.DoubleSide,fog:true});
+grassMat.positionNode=Fn(()=>{const b=bladeData.element(instanceIndex);const bn=bendState.element(instanceIndex);const vis=select(hash(instanceIndex.add(9999)).lessThan(grassDensity.mul(.5)),float(1),float(0));const hVar=hash(instanceIndex.add(5555)).mul(bladeHeightVariation);const hs=float(.35).add(b.w).add(hVar).mul(bladeBound.element(instanceIndex)).mul(vis);const taper=float(1).sub(uv().y.mul(float(1).sub(bladeTipWidth)));const lx=positionGeometry.x.mul(bladeWidth).mul(taper).mul(hs.sign());const ly=positionGeometry.y.mul(hs).mul(bladeHeight);const cY=cos(b.z),sY=sin(b.z);const rx=lx.mul(cY),rz=lx.mul(sY);const t=uv().y;const bf=pow(t,1.8);const sbx=hash(instanceIndex.add(7777)).sub(.5).mul(bladeLean);const sbz=hash(instanceIndex.add(8888)).sub(.5).mul(bladeLean);const bx=sbx.add(bn.x);const bz=sbz.add(bn.y);const relX=rx.add(bx.mul(bf).mul(bladeHeight));const relY=ly;const relZ=rz.add(bz.mul(bf).mul(bladeHeight));const oL=sqrt(rx.mul(rx).add(ly.mul(ly)).add(rz.mul(rz)));const nL=sqrt(relX.mul(relX).add(relY.mul(relY)).add(relZ.mul(relZ)));const sc=oL.div(nL.max(.0001));return vec3(b.x.add(relX.mul(sc)),relY.mul(sc),b.y.add(relZ.mul(sc)))})();
+grassMat.colorNode=Fn(()=>{const t=uv().y;const cl=bladeData.element(instanceIndex).w.saturate();const bH=hash(instanceIndex.add(4242));const isG=bH.lessThan(.4);const lG=smoothstep(float(0),float(.45),t);const uG=smoothstep(float(.4),float(.85),t);const tM=float(1).sub(bladeColorVariation).add(cl.mul(bladeColorVariation));const gT=mix(greenTipColor,bladeTipColor,tM);const wT=mix(greenTipColor,goldenTipColor,tM);const tF=mix(gT,wT,select(isG,float(1),float(0)));const lC=mix(bladeBaseColor,midColor,lG);const gC=mix(lC,tF,uG);const b=bladeData.element(instanceIndex);const d=sqrt(b.x.mul(b.x).add(b.y.mul(b.y)));return mix(gC,fogColor,smoothstep(fogStart,fogEnd,d).mul(fogIntensity))})();
+grassMat.opacityNode=Fn(()=>{const b=bladeData.element(instanceIndex);const d=sqrt(b.x.mul(b.x).add(b.y.mul(b.y)));return smoothstep(float(0),float(.1),uv().y).mul(float(1).sub(smoothstep(float(10),float(14),d)))})();
+grassMat.transparent=true;
+const grass=new THREE.InstancedMesh(createBladeGeo(),grassMat,BC);grass.frustumCulled=false;scene.add(grass);
+const d=new THREE.Object3D();for(let i=0;i<BC;i++)grass.setMatrixAt(i,d.matrix);grass.instanceMatrix.needsUpdate=true;
+const gMat=new THREE.MeshBasicNodeMaterial();
+gMat.colorNode=Fn(()=>{const wx=positionWorld.x,wz=positionWorld.z;const dist=sqrt(wx.mul(wx).add(wz.mul(wz)));const eN=noise2D(wx.mul(.25).add(100),wz.mul(.25).add(100));const mR=float(13.8).add(eN.sub(.5).mul(4));return mix(groundColor,backgroundColor,smoothstep(mR.sub(2.4),mR,dist))})();
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(FS*5,FS*5),gMat);ground.rotation.x=-Math.PI/2;scene.add(ground);
+scene.add(new THREE.AmbientLight(0xffffff,.6));const dl=new THREE.DirectionalLight(0xfff4e0,1.5);dl.position.set(5,10,7);scene.add(dl);
+const pp=new THREE.PostProcessing(renderer);const sp=pass(scene,camera);sp.setMRT(mrt({output:output,normal:transformedNormalView}));
+const sc2=sp.getTextureNode('output'),svz=sp.getViewZNode();
+const focusDist=uniform(25),focalLen=uniform(20),bokehScale=uniform(6);
+pp.outputNode=innerWidth<768?sc2:dof(sc2,svz,focusDist,focalLen,bokehScale);pp.needsUpdate=true;
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight)});
+await renderer.computeAsync(computeInit);
+renderer.domElement.style.opacity='0';renderer.domElement.style.transition='opacity 1s';
+for(let i=0;i<3;i++){renderer.compute(computeUpdate);pp.render();await new Promise(r=>requestAnimationFrame(r))}
+renderer.domElement.style.opacity='1';
+const clock=new THREE.Clock();
+// Gentle camera sway
+let camT=0;
+function animate(){
+  const dt=Math.min(clock.getDelta(),.05);
+  camT+=dt*.15;
+  camera.position.x=-2.8+Math.sin(camT*.5)*.8;
+  camera.position.y=9+Math.sin(camT*.3)*.4;
+  camera.lookAt(0,0,0);
+  renderer.compute(computeUpdate);pp.render()
+}
+renderer.setAnimationLoop(animate);
+</script></body></html>
