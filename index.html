@@ -3,857 +3,2526 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rocket — Live Financial Dashboard v4</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<title>ROCKET — Финансовый дашборд</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-:root{
---bg:#0a0e17;--surface:rgba(17,24,39,.7);--surface2:#1a2332;
---border:#1e2d3d;--border-hover:rgba(34,211,238,.3);
---text:#e2e8f0;--text-muted:#64748b;--text-dim:rgba(100,116,139,.6);
---accent:#22d3ee;--accent-dim:rgba(34,211,238,.4);
---green:#34d399;--green-bg:rgba(52,211,153,.15);
---red:#f87171;--red-bg:rgba(248,113,113,.12);
---orange:#fb923c;--orange-bg:rgba(251,146,60,.12);
---yellow:#fbbf24;--purple:#a78bfa;--purple-bg:rgba(167,139,250,.12);
---cyan:#06b6d4;
+:root {
+  --accent:   #22d3ee;
+  --green:    #34d399;
+  --red:      #f87171;
+  --purple:   #a78bfa;
+  --orange:   #fb923c;
+  --yellow:   #fbbf24;
+  --bg:       #050f05;
+  --surface:  rgba(255,255,255,0.06);
+  --card:     rgba(255,255,255,0.22);
+  --border:   rgba(255,255,255,0.12);
+  --text:     rgba(255,255,255,0.92);
+  --muted:    rgba(255,255,255,0.5);
+  --dim:      rgba(255,255,255,0.3);
+  --font:     'Outfit', sans-serif;
+  --mono:     'JetBrains Mono', monospace;
 }
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Outfit',sans-serif;background:transparent;color:var(--text);min-height:100vh}
-/* AUTH */
-#auth{display:flex;align-items:center;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at 30% 20%,rgba(167,139,250,.04) 0%,transparent 60%),var(--bg)}
-.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:380px;text-align:center}
-.auth-box h2{font-family:'Outfit',sans-serif;font-weight:800;font-size:28px;color:var(--accent);margin-bottom:8px}
-.auth-box p{font-size:12px;color:var(--text-dim);margin-bottom:24px;letter-spacing:1px}
-.auth-box input{width:100%;padding:12px 16px;background:rgba(15,25,15,.6);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;margin-bottom:14px}
-.auth-box input:focus{border-color:var(--accent-dim)}
-.auth-box button{width:100%;padding:12px;background:rgba(167,139,250,.2);border:1px solid var(--border-hover);border-radius:10px;color:var(--accent);font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .3s}
-.auth-box button:hover{background:rgba(167,139,250,.35)}
-.auth-err{color:var(--red);font-size:11px;margin-top:6px;display:none}
-/* MAIN */
-#app{display:none}
-.hdr{padding:18px 32px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:100;background:rgba(10,14,23,.93)}
-.hdr-left{display:flex;align-items:center;gap:14px}
-.hdr h1{font-family:'Outfit',sans-serif;font-size:28px;font-weight:800;letter-spacing:-1px;display:flex;align-items:baseline;gap:4px}
-.logo-rocket{color:#f87171}
-.logo-dash{color:rgba(255,255,255,.4);font-size:28px;font-weight:300}
-.hdr h1 em{font-style:italic;color:var(--text)}
-.hdr .period-tag{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,.4);padding:4px 10px;border:1px solid var(--border);border-radius:6px;letter-spacing:1px}
-.hdr-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.btn{padding:7px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-muted);font-family:'Outfit',sans-serif;font-size:10px;font-weight:500;cursor:pointer;transition:all .3s;display:flex;align-items:center;gap:5px;white-space:nowrap;letter-spacing:.5px;text-transform:uppercase}
-.btn:hover{border-color:var(--border-hover);color:var(--accent)}
-.btn-glow{background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.25);color:var(--accent)}
-.btn-glow:hover{background:rgba(167,139,250,.3)}
-.btn-live{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.3);color:var(--green)}
-.sel{padding:6px 10px;background:rgba(15,25,15,.6);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:10px;outline:none;cursor:pointer}
-.sel:focus{border-color:var(--accent-dim)}
-.status{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-.status.offline{background:var(--red);animation:none}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-/* TABS */
-.tabs{display:flex;gap:1px;padding:0 32px;border-bottom:1px solid var(--border);background:rgba(10,14,23,.92);overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tab{padding:10px 20px;font-size:14px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .3s;white-space:nowrap;letter-spacing:.5px;text-transform:uppercase}
-.tab:hover{color:var(--text)}
-.tab.active{color:#22d3ee;border-bottom-color:#22d3ee;text-shadow:0 0 12px rgba(34,211,238,.3)}
-/* CONTENT */
-.content{padding:20px 32px 60px;background:linear-gradient(180deg,rgba(10,14,23,.7) 0%,rgba(10,14,23,.5) 50%,rgba(10,14,23,.7) 100%);border-radius:0}
-.pane{display:none}.pane.active{display:block}
-/* KPI */
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
-.kpi{background:rgba(10,14,23,.22);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:16px 18px;transition:all .4s;position:relative;overflow:hidden}
-.kpi:hover{border-color:var(--border-hover);background:var(--surface2);transform:translateY(-2px)}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent-dim);opacity:.4}
-.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px}
-.kpi-val{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--text);margin-bottom:4px}
-.kpi-sub{font-family:'JetBrains Mono',monospace;font-size:12px}
-.up{color:var(--green)}.dn{color:var(--red)}.nt{color:var(--text-dim)}.wr{color:var(--orange)}
-/* CHARTS */
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
-.card{background:rgba(10,14,23,.22);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:18px 20px;transition:border-color .3s;position:relative}
-.card:hover{border-color:var(--border-hover)}
-.card.full{grid-column:1/-1}
-.card-title{font-family:'Outfit',sans-serif;font-weight:400;font-size:15px;margin-bottom:12px;color:var(--text);display:flex;align-items:center;gap:8px}
-.card-title .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
-.cw{position:relative;height:250px}.cw.tall{height:300px}.cw.short{height:180px}
-/* TABLES */
-.tw{overflow-x:auto;margin-top:8px}
-table.dt{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:10px}
-table.dt th{background:rgba(15,25,15,.6);color:var(--text-dim);font-weight:500;text-align:right;padding:7px 10px;border-bottom:1px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:.5px}
-table.dt th:first-child{text-align:left}
-table.dt td{padding:6px 10px;text-align:right;border-bottom:1px solid rgba(167,139,250,.06)}
-table.dt td:first-child{text-align:left;font-family:'Outfit',sans-serif;font-weight:400;color:var(--text)}
-table.dt tr.tot td{font-weight:700;border-top:2px solid var(--border);padding-top:8px}
-table.dt tr:hover td{background:rgba(167,139,250,.03)}
-/* ANALYSIS */
-.asec{background:rgba(10,14,23,.22);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:24px 28px;margin-bottom:16px}
-.asec h3{font-family:'Outfit',sans-serif;font-weight:400;font-size:18px;margin-bottom:14px;color:var(--text)}
-.finding{margin-bottom:16px;padding-left:0}
-.finding-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-right:6px}
-.finding p{font-size:13px;line-height:1.7;color:var(--text);opacity:.85;margin-top:4px}
-.finding .basis{font-size:10px;color:var(--text-dim);margin-top:4px;padding:4px 8px;background:rgba(15,25,15,.5);border:1px solid var(--border);border-radius:4px;display:inline-block;font-family:'JetBrains Mono',monospace}
-.rtag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:600;font-family:'JetBrains Mono',monospace}
-.rtag.hi{background:var(--red-bg);color:var(--red)}
-.rtag.md{background:var(--orange-bg);color:var(--orange)}
-.rtag.lo{background:var(--green-bg);color:var(--green)}
-.rec{background:rgba(15,25,15,.5);border-left:3px solid var(--accent-dim);padding:14px 18px;margin-bottom:10px;border-radius:0 10px 10px 0;transition:border-color .3s}
-.rec:hover{border-left-color:var(--accent)}
-.rec h4{font-size:13px;font-weight:500;margin-bottom:3px;color:var(--text)}
-.rec p{font-size:12px;color:var(--text-muted);margin:0}
-.rec.urg{border-left-color:var(--red)}.rec.imp{border-left-color:var(--orange)}.rec.str{border-left-color:var(--purple)}
-/* THRESHOLD */
-.th-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-top:10px}
-.th-item{background:rgba(15,25,15,.5);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;border-left:3px solid var(--border);transition:all .3s}
-.th-item:hover{background:rgba(20,35,20,.5)}
-.th-item.alert{border-left-color:var(--red)}.th-item.warning{border-left-color:var(--orange)}.th-item.ok{border-left-color:var(--green)}
-.th-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.th-item.alert .th-dot{background:var(--red)}.th-item.warning .th-dot{background:var(--orange)}.th-item.ok .th-dot{background:var(--green)}
-.th-lbl{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
-.th-txt{font-size:11px}
-/* NOTES */
-.note-btn{position:absolute;top:8px;right:10px;background:rgba(15,25,15,.6);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--text-dim);cursor:pointer;z-index:2;transition:all .2s}
-.note-btn:hover{border-color:var(--accent-dim);color:var(--accent)}
-.note-panel{display:none;position:absolute;top:30px;right:0;background:rgba(8,16,8,.95);border:1px solid var(--border);border-radius:10px;padding:12px 14px;width:300px;z-index:20;box-shadow:0 12px 40px rgba(0,0,0,.6)}
-.note-panel.open{display:block}
-.note-entry{background:rgba(15,25,15,.5);border-radius:6px;padding:8px;margin-bottom:6px;border-left:2px solid var(--accent-dim)}
-.note-form{display:flex;gap:6px;margin-top:8px}
-.note-input{flex:1;padding:6px 8px;background:rgba(15,25,15,.6);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none}
-.note-submit{padding:6px 10px;background:rgba(167,139,250,.2);border:1px solid var(--border-hover);border-radius:6px;color:var(--accent);font-size:10px;font-weight:600;cursor:pointer}
-/* DATA SOURCE BADGE */
-.ds-badge{display:inline-flex;align-items:center;gap:5px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text-dim);background:rgba(15,25,15,.5);border:1px solid var(--border);border-radius:4px;padding:3px 8px;margin-bottom:10px}
-.ds-badge.live{color:var(--green);border-color:rgba(52,211,153,.2)}
-.ds-badge.demo{color:var(--orange);border-color:rgba(251,146,60,.2)}
-/* RAW TABLE */
-.raw-table-wrap{overflow-x:auto;max-height:400px;overflow-y:auto}
-.raw-table-wrap table.dt{font-size:9px}
-/* PAYMENT CALENDAR */
-.pay-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(15,25,15,.4);margin-bottom:6px;border-left:3px solid var(--border)}
-.pay-row.pay-out{border-left-color:var(--red)}
-.pay-row.pay-in{border-left-color:var(--green)}
-.pay-row.pay-plan{border-left-color:var(--orange)}
-.pay-date{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);min-width:60px}
-.pay-name{font-size:12px;flex:1}
-.pay-amt{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
-/* TASK STATUS */
-.task-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(15,25,15,.4);margin-bottom:6px}
-.task-status{font-size:9px;padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-weight:600;white-space:nowrap}
-.task-status.done{background:var(--green-bg);color:var(--green)}
-.task-status.wip{background:var(--orange-bg);color:var(--orange)}
-.task-status.late{background:var(--red-bg);color:var(--red)}
-.task-status.todo{background:rgba(100,116,139,.1);color:var(--text-muted)}
-/* LOADING */
-.ld-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(8px)}
-.ld-overlay.on{display:flex}
-.spinner{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
-@keyframes spin{to{transform:rotate(360deg)}}
-/* PROGRESS */
-.pbar{position:fixed;top:0;left:0;height:2px;background:var(--accent-dim);z-index:200;width:0;transition:width .3s}
-/* REVEAL */
-[data-reveal]{opacity:0;transform:translateY(20px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
-[data-reveal].revealed{opacity:1;transform:translateY(0)}
-/* RESPONSIVE */
-@media(max-width:900px){.grid2{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}.content{padding:14px 16px 40px}.hdr{padding:12px 16px 8px}.kpi-row{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:500px){.kpi-row{grid-template-columns:1fr 1fr}.tabs{padding:0 12px}.hdr h1{font-size:16px}}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  overflow-x: hidden;
+}
+
+/* ── GRASS BACKGROUND ── */
+#grassFrame {
+  position: fixed; inset: 0; z-index: 0;
+  border: none; width: 100%; height: 100%;
+  pointer-events: none;
+}
+#vignette {
+  position: fixed; inset: 0; z-index: 1;
+  background: radial-gradient(
+    ellipse 70% 70% at 50% 50%,
+    rgba(5,15,5,0.82) 30%,
+    rgba(5,15,5,0.55) 60%,
+    rgba(5,15,5,0.1) 100%
+  );
+  pointer-events: none;
+}
+
+/* ── PASSWORD GATE ── */
+#gate {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5,15,5,0.96);
+  backdrop-filter: blur(12px);
+}
+.gate-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 48px 56px;
+  text-align: center;
+  max-width: 400px; width: 90%;
+  backdrop-filter: blur(20px);
+}
+.gate-logo {
+  font-size: 36px; font-weight: 800; letter-spacing: 2px; margin-bottom: 6px;
+}
+.gate-logo span { color: var(--red); }
+.gate-sub { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+.gate-input {
+  width: 100%;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 16px;
+  letter-spacing: 4px;
+  outline: none;
+  transition: border-color .2s;
+  text-align: center;
+}
+.gate-input:focus { border-color: var(--accent); }
+.gate-btn {
+  margin-top: 16px; width: 100%;
+  background: var(--accent); color: #050f05;
+  border: none; border-radius: 10px;
+  padding: 14px; font-family: var(--font);
+  font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: opacity .2s;
+}
+.gate-btn:hover { opacity: .85; }
+.gate-error { color: var(--red); font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+/* ── MAIN APP ── */
+#app {
+  position: relative; z-index: 2;
+  min-height: 100vh;
+  display: none;
+}
+
+/* ── HEADER ── */
+header {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(5,15,5,0.72);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex; align-items: center; gap: 16px;
+  flex-wrap: wrap;
+}
+.logo-text {
+  font-size: 22px; font-weight: 800; letter-spacing: 2px; white-space: nowrap;
+}
+.logo-text .r { color: var(--red); }
+.logo-text .s { color: rgba(255,255,255,.4); font-size: 15px; font-weight: 500; margin-left: 8px; }
+
+.period-group {
+  display: flex; align-items: center; gap: 8px; margin-left: auto;
+  flex-wrap: wrap;
+}
+.period-label { font-size: 11px; text-transform: uppercase; color: var(--muted); }
+.period-select {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 6px 12px;
+  cursor: pointer; outline: none;
+}
+.period-select:focus { border-color: var(--accent); }
+
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  padding: 7px 16px; border-radius: 8px;
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; border: 1px solid; transition: all .2s;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #050f05; border-color: var(--accent); }
+.btn-primary:hover { opacity: .85; }
+.btn-secondary { background: transparent; color: var(--accent); border-color: var(--accent); }
+.btn-secondary:hover { background: rgba(34,211,238,0.1); }
+.btn-outline { background: transparent; color: var(--muted); border-color: var(--border); }
+.btn-outline:hover { border-color: var(--muted); color: var(--text); }
+.btn-export { position: relative; }
+.export-menu {
+  display: none; position: absolute; top: calc(100% + 6px); right: 0;
+  background: rgba(10,25,10,0.95); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; min-width: 160px; z-index: 200;
+  backdrop-filter: blur(20px);
+}
+.export-menu.open { display: block; }
+.export-item {
+  padding: 10px 16px; cursor: pointer; font-size: 13px; font-weight: 500;
+  transition: background .15s;
+}
+.export-item:hover { background: rgba(255,255,255,0.06); }
+
+.update-status {
+  font-size: 11px; color: var(--muted); white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green); flex-shrink: 0;
+}
+.status-dot.loading { background: var(--yellow); animation: pulse 1s infinite; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── NAVIGATION TABS ── */
+nav.tabs {
+  position: sticky; top: 57px; z-index: 40;
+  background: rgba(5,15,5,0.80);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  display: flex; gap: 2px; overflow-x: auto;
+  scrollbar-width: none;
+}
+nav.tabs::-webkit-scrollbar { display: none; }
+.tab-btn {
+  padding: 12px 16px;
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  color: var(--muted); background: none; border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer; white-space: nowrap;
+  transition: color .2s, border-color .2s;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── CONTENT PANELS ── */
+.panel { display: none; padding: 24px 20px; }
+.panel.active { display: block; }
+
+/* ── SECTION HEADING ── */
+.section-h {
+  font-size: 11px; text-transform: uppercase; color: var(--muted);
+  letter-spacing: 1.5px; margin-bottom: 16px; margin-top: 24px;
+}
+.section-h:first-child { margin-top: 0; }
+
+/* ── KPI CARDS ── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 24px;
+}
+.kpi-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px 18px;
+  backdrop-filter: blur(20px);
+  transition: border-color .2s;
+}
+.kpi-card:hover { border-color: rgba(255,255,255,0.2); }
+.kpi-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); margin-bottom: 8px;
+}
+.kpi-value {
+  font-family: var(--mono); font-size: 22px; font-weight: 700;
+  line-height: 1; margin-bottom: 6px;
+}
+.kpi-delta {
+  font-size: 11px; font-family: var(--mono);
+  display: flex; align-items: center; gap: 4px;
+}
+.delta-pos { color: var(--green); }
+.delta-neg { color: var(--red); }
+.delta-neu { color: var(--muted); }
+
+/* ── CHART GRID ── */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px; margin-bottom: 24px;
+}
+.chart-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px;
+  backdrop-filter: blur(20px);
+  position: relative;
+}
+.chart-card.wide { grid-column: 1 / -1; }
+.chart-title {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  margin-bottom: 16px;
+}
+.chart-wrap { position: relative; height: 220px; }
+.chart-wrap.tall { height: 300px; }
+.chart-wrap.short { height: 160px; }
+
+/* ── TABLE ── */
+.data-table {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+}
+.data-table th {
+  font-size: 10px; text-transform: uppercase; color: var(--muted);
+  font-weight: 600; padding: 8px 10px; text-align: right;
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.data-table th:first-child { text-align: left; }
+.data-table td {
+  padding: 7px 10px; text-align: right;
+  font-family: var(--mono); font-size: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.data-table td:first-child {
+  text-align: left; font-family: var(--font);
+  font-size: 12px; color: var(--text);
+}
+.data-table tr:hover td { background: rgba(255,255,255,0.03); }
+.data-table .section-row td {
+  background: rgba(255,255,255,0.04);
+  font-weight: 700; color: var(--accent);
+  font-family: var(--font); font-size: 11px;
+  text-transform: uppercase; letter-spacing: .8px;
+}
+.data-table .total-row td {
+  font-weight: 700; border-top: 1px solid var(--border);
+  color: var(--text);
+}
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+.muted-val { color: var(--muted); }
+
+/* ── THRESHOLD ALERT ── */
+.alert-row { background: rgba(248,113,113,0.06) !important; }
+.alert-row td:first-child::before {
+  content: '⚠ ';
+  color: var(--red);
+}
+
+/* ── AI ANALYSIS ── */
+.ai-section { margin-bottom: 24px; }
+.ai-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px;
+  backdrop-filter: blur(20px);
+}
+.ai-card-title {
+  font-size: 14px; font-weight: 700; color: var(--accent);
+  margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+}
+.ai-card-title::before {
+  content: ''; display: block;
+  width: 3px; height: 18px; border-radius: 2px;
+  background: var(--accent);
+}
+
+/* Findings */
+.finding {
+  margin-bottom: 20px; padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.finding:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.finding-num {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--accent); margin-bottom: 4px; font-family: var(--mono);
+}
+.finding-title { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.finding-body { font-size: 13px; line-height: 1.7; color: rgba(255,255,255,.75); }
+.finding-basis {
+  margin-top: 8px; font-size: 11px; color: var(--muted);
+  font-style: italic; line-height: 1.5;
+}
+
+/* Risk tags */
+.risk-item { margin-bottom: 20px; }
+.risk-item:last-child { margin-bottom: 0; }
+.risk-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.risk-tag {
+  font-size: 10px; font-weight: 700; padding: 3px 10px;
+  border-radius: 20px; text-transform: uppercase; letter-spacing: 1px;
+  font-family: var(--mono);
+}
+.risk-HIGH { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+.risk-MED  { background: rgba(251,191,36,0.15);  color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+.risk-LOW  { background: rgba(52,211,153,0.15);  color: var(--green); border: 1px solid rgba(52,211,153,0.3); }
+.risk-title { font-size: 14px; font-weight: 700; }
+.risk-body { font-size: 13px; line-height: 1.7; color: rgba(255,255,255,.75); }
+
+/* Chain analysis */
+.chain-item {
+  margin-bottom: 24px; padding: 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+}
+.chain-topic { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+.chain-steps { display: flex; flex-direction: column; gap: 12px; }
+.chain-step {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px; line-height: 1.6;
+}
+.chain-fact   { background: rgba(34,211,238,0.06); }
+.chain-cause  { background: rgba(167,139,250,0.06); }
+.chain-fcst   { background: rgba(251,146,60,0.06); }
+.chain-action { background: rgba(52,211,153,0.06); }
+.chain-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+.chain-text { color: rgba(255,255,255,.8); }
+.chain-text strong { color: var(--text); display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px; }
+
+/* Recommendations */
+.rec-item {
+  margin-bottom: 12px;
+  border-radius: 10px; overflow: hidden;
+  display: flex;
+}
+.rec-stripe { width: 4px; flex-shrink: 0; }
+.rec-URGENT  .rec-stripe { background: var(--red); }
+.rec-IMPORTANT .rec-stripe { background: var(--yellow); }
+.rec-STRATEGIC .rec-stripe { background: var(--purple); }
+.rec-body { padding: 14px 18px; flex: 1; background: rgba(255,255,255,0.04); }
+.rec-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  font-weight: 700; margin-bottom: 6px;
+}
+.rec-URGENT    .rec-label { color: var(--red); }
+.rec-IMPORTANT .rec-label { color: var(--yellow); }
+.rec-STRATEGIC .rec-label { color: var(--purple); }
+.rec-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.rec-text { font-size: 13px; color: rgba(255,255,255,.75); line-height: 1.6; }
+.rec-basis { font-size: 11px; color: var(--muted); margin-top: 6px; font-style: italic; }
+
+/* ── TOOLS GRID ── */
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.tool-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px;
+  backdrop-filter: blur(20px);
+}
+.tool-name { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.tool-bar {
+  height: 6px; border-radius: 3px;
+  background: rgba(255,255,255,0.1); margin-bottom: 6px;
+}
+.tool-fill { height: 100%; border-radius: 3px; transition: width .8s ease; }
+.tool-pct { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+/* ── TASKS ── */
+.task-list { display: flex; flex-direction: column; gap: 8px; }
+.task-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 16px;
+}
+.task-status {
+  font-size: 10px; text-transform: uppercase; font-weight: 700;
+  padding: 2px 8px; border-radius: 10px; white-space: nowrap; margin-top: 2px;
+}
+.status-done     { background: rgba(52,211,153,0.15); color: var(--green); }
+.status-overdue  { background: rgba(248,113,113,0.15); color: var(--red); }
+.status-active   { background: rgba(34,211,238,0.15); color: var(--accent); }
+.task-text { flex: 1; font-size: 13px; line-height: 1.5; }
+.task-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+/* ── NOTES ── */
+.note-btn {
+  position: absolute; top: 12px; right: 12px;
+  background: rgba(255,255,255,0.08); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--muted); font-size: 11px;
+  padding: 4px 8px; cursor: pointer; z-index: 5;
+  transition: all .2s; white-space: nowrap;
+}
+.note-btn:hover { color: var(--text); border-color: var(--accent); }
+.note-btn.has-note { color: var(--yellow); border-color: rgba(251,191,36,0.4); }
+
+.note-display {
+  margin-top: 8px; padding: 8px 12px;
+  background: rgba(251,191,36,0.08);
+  border-left: 3px solid var(--yellow);
+  border-radius: 0 6px 6px 0;
+  font-size: 12px; color: var(--text); line-height: 1.5;
+  display: none;
+}
+.note-display.visible { display: block; }
+.note-display .note-meta { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+
+/* Note modal */
+#noteModal {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  align-items: center; justify-content: center;
+  background: rgba(5,15,5,0.75); backdrop-filter: blur(8px);
+}
+#noteModal.open { display: flex; }
+.note-modal-box {
+  background: rgba(10,22,10,0.97);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px;
+  width: 420px; max-width: 95vw;
+  backdrop-filter: blur(20px);
+}
+.note-modal-title {
+  font-size: 14px; font-weight: 700; margin-bottom: 12px;
+  color: var(--accent);
+}
+.note-modal-period {
+  font-size: 11px; color: var(--muted); margin-bottom: 16px;
+}
+.note-textarea {
+  width: 100%; min-height: 100px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px;
+  color: var(--text); font-family: var(--font);
+  font-size: 13px; line-height: 1.6;
+  resize: vertical; outline: none;
+}
+.note-textarea:focus { border-color: var(--accent); }
+.note-modal-btns {
+  display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end;
+}
+.note-del-btn {
+  margin-right: auto; background: transparent;
+  border: 1px solid rgba(248,113,113,0.3); color: var(--red);
+  border-radius: 8px; padding: 7px 14px; cursor: pointer;
+  font-family: var(--font); font-size: 12px;
+}
+.note-del-btn:hover { background: rgba(248,113,113,0.1); }
+
+/* ── LOADER ── */
+.loading-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(5,15,5,0.7); backdrop-filter: blur(8px);
+  flex-direction: column; gap: 16px;
+}
+.loading-overlay.show { display: flex; }
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(34,211,238,0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 14px; color: var(--muted); }
+
+/* ── STUB ── */
+.stub {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 20px; color: var(--muted);
+  font-size: 13px; gap: 12px;
+}
+.stub-icon { font-size: 36px; }
+.stub-title { font-size: 16px; font-weight: 600; color: var(--text); }
+
+/* ── CKP TABLE ── */
+.ckp-table-wrap { overflow-x: auto; }
+.progress-bar { display: flex; align-items: center; gap: 8px; }
+.progress-track { flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; min-width: 80px; }
+.progress-fill  { height: 100%; border-radius: 3px; }
+
+/* ── DEMO BADGE ── */
+.demo-badge {
+  position: fixed; bottom: 16px; right: 16px; z-index: 300;
+  background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.3);
+  color: var(--yellow); font-size: 11px; font-weight: 700;
+  padding: 6px 14px; border-radius: 20px; letter-spacing: 1px;
+  backdrop-filter: blur(10px);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  header { padding: 10px 12px; gap: 10px; }
+  .period-group { margin-left: 0; width: 100%; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .chart-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
-<iframe id="grass-bg" src="grass_bg.html" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;border:none;pointer-events:none"></iframe>
-<div class="pbar" id="pbar"></div>
-<!-- AUTH -->
-<div id="auth">
-<div class="auth-box">
-<h2>Rocket</h2>
-<p>Live Financial Dashboard</p>
-<input type="password" id="pwd" placeholder="Пароль" onkeydown="if(event.key==='Enter')login()">
-<button onclick="login()">Войти</button>
-<div class="auth-err" id="aerr">Неверный пароль</div>
+
+<!-- Grass iframe -->
+<iframe id="grassFrame" src="grass_bg.html" title="background"></iframe>
+<div id="vignette"></div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Загрузка данных…</div>
 </div>
+
+<!-- PASSWORD GATE -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-logo"><span class="r">ROCKET</span></div>
+    <div class="gate-sub">Финансовый дашборд · Управленческая отчётность</div>
+    <input type="password" class="gate-input" id="pwInput" placeholder="••••••••"
+      onkeydown="if(event.key==='Enter') checkPassword()" autocomplete="current-password">
+    <button class="gate-btn" onclick="checkPassword()">Войти</button>
+    <div class="gate-error" id="gateError"></div>
+  </div>
 </div>
-<!-- LOADING -->
-<div class="ld-overlay" id="ld"><div><div class="spinner"></div><div style="color:var(--text-dim);font-size:13px;text-align:center" id="ld-txt">Загрузка...</div></div></div>
-<!-- APP -->
+
+<!-- MAIN APP -->
 <div id="app">
-<div class="hdr">
-<div class="hdr-left">
-<h1><span class="logo-rocket">ROCKET</span> <span class="logo-dash">— Финансовый анализ</span></h1>
-<span class="period-tag" id="ptag">YTD 2026</span>
+  <!-- Header -->
+  <header>
+    <div class="logo-text"><span class="r">ROCKET</span><span class="s">Финансовый анализ</span></div>
+
+    <div class="period-group">
+      <span class="period-label">С</span>
+      <select class="period-select" id="periodFrom" onchange="applyPeriod()"></select>
+      <span class="period-label">По</span>
+      <select class="period-select" id="periodTo" onchange="applyPeriod()"></select>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="refreshData()">↻ Обновить данные</button>
+      <button class="btn btn-secondary" onclick="refreshAI()">✦ Обновить анализ</button>
+      <div class="btn-export" id="exportWrap">
+        <button class="btn btn-outline" onclick="toggleExportMenu()">↓ Скачать отчёт ▾</button>
+        <div class="export-menu" id="exportMenu">
+          <div class="export-item" onclick="exportExcel()">📊 Excel (.xlsx)</div>
+          <div class="export-item" onclick="exportPDF()">📄 PDF (.pdf)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="update-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Загружено: демо-режим</span>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="tabs" id="tabNav"></nav>
+
+  <!-- Content -->
+  <main id="mainContent"></main>
 </div>
-<div class="hdr-actions">
-<span style="font-size:10px;color:var(--text-dim);margin-right:4px">с</span>
-<select class="sel" id="pFrom" onchange="onPeriod()" style="width:90px">
-<option value="0" selected>Январь</option>
-<option value="1">Февраль</option>
-<option value="2">Март</option>
-<option value="3">Апрель</option>
-<option value="4">Май</option>
-</select>
-<span style="font-size:10px;color:var(--text-dim);margin:0 4px">по</span>
-<select class="sel" id="pTo" onchange="onPeriod()" style="width:90px">
-<option value="0">Январь</option>
-<option value="1">Февраль</option>
-<option value="2">Март</option>
-<option value="3">Апрель</option>
-<option value="4" selected>Май</option>
-</select>
-<button class="btn btn-live" onclick="fetchData()">↻ Обновить данные</button>
-<button class="btn" onclick="fetchAI()">⚡ AI Анализ</button>
-<button class="btn btn-glow" onclick="downloadReport()">⬇ Скачать</button>
-<span class="status" id="live-dot" title="Live"></span>
-<span id="updated-at" style="font-size:9px;color:var(--text-dim);font-family:'JetBrains Mono',monospace"></span>
+
+<!-- NOTE MODAL -->
+<div id="noteModal">
+  <div class="note-modal-box">
+    <div class="note-modal-title" id="noteModalTitle">Заметка к диаграмме</div>
+    <div class="note-modal-period" id="noteModalPeriod"></div>
+    <textarea class="note-textarea" id="noteTextarea" placeholder="Введите комментарий к диаграмме…"></textarea>
+    <div class="note-modal-btns">
+      <button class="note-del-btn" onclick="deleteNote()">🗑 Удалить</button>
+      <button class="btn btn-outline" onclick="closeNoteModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveNote()">Сохранить</button>
+    </div>
+  </div>
 </div>
-</div>
-<div class="tabs" id="tabbar"></div>
-<div class="content" id="main"></div>
-</div>
+
+<div class="demo-badge" id="demoBadge">DEMO</div>
 
 <script>
-// ===== CONFIG =====
-// DATA_PROXY_URL: вставьте URL вашего Google Apps Script Web App
-// Получить: Расширения → Apps Script → Развернуть → Веб-приложение → Скопировать URL
-const C={
-  DATA_PROXY:'https://script.google.com/macros/s/AKfycbx3JjpRKWLftdPUNDrOOcybTEzGKQQIQ5r6NFIpNklPwL65QRoDkoMpZavI1pO4Se0T9A/exec',   // Apps Script Web App
-  AI:'WEBHOOK_AI_ANALYSIS_URL',               // ← Make.com AI Analysis webhook (опционально)
-  TOOLS:'https://script.google.com/macros/s/AKfycbwxYcEODuv8V9XIuXpyJ6giQOE8pXpHZITkznxqzTSuLef4HYlY1eHdwaBOvAvO8Sbh/exec',
-  PWD_HASH:'5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
-  DEMO: false   // LIVE mode — Apps Script deployed 01.06.2026
+/* ═══════════════════════════════════════════════
+   CONFIGURATION
+═══════════════════════════════════════════════ */
+const CONFIG = {
+  DEMO: true,
+  APPS_SCRIPT_URL: 'YOUR_APPS_SCRIPT_URL_HERE',    // Заменить после деплоя Apps Script
+  AI_WEBHOOK_URL:  'YOUR_MAKE_AI_WEBHOOK_URL_HERE', // Webhook Make.com для AI-анализа
+  PASSWORD_HASH:   '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8', // "password"
+  // Для смены пароля: SHA-256 от нового пароля → вставить сюда
 };
 
-// ===== AUTH =====
-async function login(){const h=await sha(document.getElementById('pwd').value);if(h===C.PWD_HASH||C.DEMO){document.getElementById('auth').style.display='none';document.getElementById('app').style.display='block';init()}else{document.getElementById('aerr').style.display='block'}}
-async function sha(m){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(m));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+/* ═══════════════════════════════════════════════
+   DEMO DATA (Янв–Май 2026)
+═══════════════════════════════════════════════ */
+const DEMO = {
+  months: ['Янв 2026','Фев 2026','Мар 2026','Апр 2026','Май 2026'],
+  monthKeys: ['2026-01','2026-02','2026-03','2026-04','2026-05'],
 
-// ===== TABS =====
-const TABS=[
-{id:'overview',label:'Обзор',v:true},
-{id:'pnl',label:'ОПиУ',v:true},
-{id:'pnl_combo',label:'ОПиУ блоки',v:true},
-{id:'pnl_consol',label:'Консолидация',v:true},
-{id:'model',label:'Модель',v:true},
-{id:'cf',label:'ДДС',v:true},
-{id:'balance',label:'Баланс',v:true},
-{id:'payment',label:'Плат.календарь',v:true},
-{id:'traffic',label:'Трафик',v:true},
-{id:'ckp',label:'ЦКП',v:true},
-{id:'tasks',label:'Задачи',v:true},
-{id:'results',label:'Результаты',v:true},
-{id:'conclusions',label:'Выводы',v:true},
+  // ОПиУ
+  revenue:      [885439, 930320, 871205, 741380, 698450],
+  var_costs:    [320000, 380000, 340000, 310000, 298000],  // трафик + переменные
+  indirect:     [185000, 195000, 198000, 205000, 210000],  // постоянные
+  op_profit:    [214000, 313000, 191000,  84000,  52000],  // EBIT
+  interest:     [ 42000,  42000,  42000,  42000,  42000],
+  net_profit:   [124500, 187200,  94300, -28500, -62100],
+  margin_pct:   [  36.2,   40.9,   39.0,   41.8,   42.7], // валовая маржа %
+  op_margin_pct:[  24.2,   33.6,   21.9,   11.3,    7.4],
+  np_margin_pct:[  14.1,   20.1,   10.8,   -3.8,   -8.9],
+
+  // ДДС
+  ncf_op:       [185000, 250000, 145000, -45000, -85000],
+  ncf_inv:      [-25000, -15000, -20000, -10000,  -8000],
+  ncf_fin:      [-60000, -80000, -60000,  50000,  80000],
+  dividends:    [ 50000,  70000,  50000,      0,      0],
+  cash:         [450000, 555000, 570000, 565000, 552000],
+
+  // Баланс
+  assets_total: [2850000,2950000,2980000,2940000,2920000],
+  equity:       [1420000,1607000,1701000,1672000,1610000],
+  liabilities:  [1430000,1343000,1279000,1268000,1310000],
+  current_ratio:[   2.1,    2.4,    2.6,    2.3,    2.1],
+  autonomy:     [  0.498,  0.545,  0.571,  0.569,  0.552],
+  de_ratio:     [   1.01,  0.835,  0.752,  0.758,  0.814],
+  dfl:          [   1.24,   1.16,   1.28,   1.68,   2.42],
+
+  // Трафик
+  crm_pct:      [  72,    75,    78,    80,    82],
+  ftd_new:      [ 845,   780,   712,   634,   598],
+  ftd_old:      [2180,  2340,  2520,  2534,  2752],
+  rev_core:     [520000,545000,498000,410000,378000],
+  rev_influence:[185000,198000,182000,155000,142000],
+  rev_streams:  [ 95000,102000, 98000, 85000, 78000],
+  rev_mannequin:[ 85439, 85320, 93205, 91380,100450],
+  tr_fb:        [210000,245000,218000,195000,187000],
+  tr_tg:        [110000,135000,122000,115000,111000],
+
+  // ЦКП
+  ckp: [
+    { name:'Выход на безубыточность по трафику',   target:'Q2 2026', actual:'апр 2026', pct:100, status:'done'    },
+    { name:'Запуск Mannequin до $100K/мес',         target:'Q3 2026', actual:'—',        pct: 84, status:'active'  },
+    { name:'Снижение CRM-зависимости до 70%',       target:'Q4 2026', actual:'—',        pct: 24, status:'risk'    },
+    { name:'Регистрация в ПВТ',                     target:'Q3 2026', actual:'—',        pct: 45, status:'active'  },
+    { name:'Формирование кэш-буфера 3 мес.',        target:'Q4 2026', actual:'—',        pct: 15, status:'risk'    },
+    { name:'Диверсификация: 3+ каналов выручки',    target:'Q4 2026', actual:'—',        pct: 60, status:'active'  },
+    { name:'Рефинансирование кредита <18%',         target:'Q3 2026', actual:'—',        pct: 30, status:'active'  },
+    { name:'Команда: снижение просрочек до 10%',    target:'Q2 2026', actual:'—',        pct: 55, status:'active'  },
+  ],
+
+  // Инструменты
+  tools: [
+    { name:'CRM (AmoCRM)',       pct:92, color:'#22d3ee' },
+    { name:'Аналитика (GA4)',    pct:78, color:'#34d399' },
+    { name:'Задачи (Notion)',    pct:85, color:'#a78bfa' },
+    { name:'Финансы (таблицы)', pct:95, color:'#22d3ee' },
+    { name:'Telegram-боты',     pct:64, color:'#fb923c' },
+    { name:'Make.com',          pct:55, color:'#fbbf24' },
+    { name:'Дашборд',           pct:40, color:'#f87171' },
+    { name:'Apps Script',       pct:35, color:'#a78bfa' },
+  ],
+
+  // Задачи (текущий месяц)
+  tasks_done: [
+    { text:'Подготовка ОПиУ за апрель',      date:'05.05.2026', resp:'Евгения' },
+    { text:'Настройка Make.com Data Proxy',  date:'08.05.2026', resp:'Разработчик' },
+    { text:'Аудит трафика FB/TG по ROI',     date:'12.05.2026', resp:'Маркетинг' },
+    { text:'Закрытие задолженности по ДЗ',  date:'18.05.2026', resp:'Менеджер' },
+  ],
+  tasks_overdue: [
+    { text:'Подключение Apps Script к дашборду', due:'01.05.2026', resp:'Разработчик' },
+    { text:'Настройка AI-анализа (Make.com)',     due:'15.05.2026', resp:'Евгения'     },
+    { text:'Запуск отчёта по зарплатной ведомости', due:'10.05.2026', resp:'Бухгалтер' },
+  ],
+
+  // Пороговые правила (набор для AI)
+  threshold_rules: [
+    { id:1,  metric:'net_margin',     op:'<',  val:5,    severity:'HIGH',   label:'Чистая маржа ниже 5% — критично' },
+    { id:2,  metric:'current_ratio',  op:'<',  val:1.5,  severity:'HIGH',   label:'Текущая ликвидность < 1.5' },
+    { id:3,  metric:'cash_days',      op:'<',  val:15,   severity:'HIGH',   label:'Кэш < 15 дней расходов — ALERT' },
+    { id:4,  metric:'de_ratio',       op:'>',  val:1.5,  severity:'HIGH',   label:'D/E > 1.5 — высокий долг' },
+    { id:5,  metric:'autonomy',       op:'<',  val:0.4,  severity:'HIGH',   label:'Коэф. автономии < 0.4' },
+    { id:6,  metric:'crm_pct',        op:'>',  val:80,   severity:'HIGH',   label:'CRM-зависимость > 80% — риск' },
+    { id:7,  metric:'op_margin',      op:'<',  val:10,   severity:'MED',    label:'Операц. маржа < 10%' },
+    { id:8,  metric:'ftd_new_growth', op:'<',  val:-10,  severity:'MED',    label:'FTD новые падают > 10% мес.' },
+    { id:9,  metric:'dividends_cash', op:'>',  val:0.3,  severity:'MED',    label:'Дивиденды > 30% кэш-потока' },
+    { id:10, metric:'dfl',            op:'>',  val:2.0,  severity:'HIGH',   label:'DFL > 2.0 — отриц. рычаг' },
+  ],
+
+  // AI Analysis (последние данные)
+  ai_date: '05.06.2026 09:00',
+};
+
+/* ═══════════════════════════════════════════════
+   TABS DEFINITION
+═══════════════════════════════════════════════ */
+const TABS = [
+  { id:'overview',   label:'Обзор'        },
+  { id:'pnl',        label:'ОПиУ'         },
+  { id:'pnl_blocks', label:'ОПиУ блоки'   },
+  { id:'cashflow',   label:'ДДС'          },
+  { id:'balance',    label:'Баланс'       },
+  { id:'traffic',    label:'Трафик'       },
+  { id:'consol',     label:'Консолидация' },
+  { id:'model',      label:'Модель'       },
+  { id:'calendar',   label:'Плат. календарь'},
+  { id:'tasks',      label:'Задачи'       },
+  { id:'ckp',        label:'ЦКП'          },
+  { id:'results',    label:'Результаты'   },
+  { id:'ai',         label:'Выводы ✦'     },
 ];
-function buildTabs(){
-  const tb=document.getElementById('tabbar'),mn=document.getElementById('main');
-  tb.innerHTML=TABS.filter(t=>t.v).map((t,i)=>`<div class="tab${i===0?' active':''}" data-t="${t.id}">${t.label}</div>`).join('');
-  mn.innerHTML=TABS.filter(t=>t.v).map((t,i)=>`<div class="pane${i===0?' active':''}" id="p-${t.id}"></div>`).join('');
-  tb.addEventListener('click',e=>{if(!e.target.classList.contains('tab'))return;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));e.target.classList.add('active');document.getElementById('p-'+e.target.dataset.t).classList.add('active')});
-}
 
-// ===== FORMAT =====
-const F={
-  $:v=>v>=1e6?'$'+(v/1e6).toFixed(2)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+v.toFixed(0),
-  pct:v=>v.toFixed(1)+'%',
-  n:v=>v.toLocaleString('ru-RU'),
-  trend:(c,p,lbl)=>{if(p==null)return{t:'',c:'nt'};const d=((c-p)/Math.abs(p)*100);return{t:(d>=0?'↑':'↓')+Math.abs(d).toFixed(1)+'% к '+lbl,c:d>=0?'up':'dn'}}
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
+let state = {
+  data: null,
+  fromIdx: 0,
+  toIdx: 4,
+  activeTab: 'overview',
+  notes: JSON.parse(localStorage.getItem('rkt_notes') || '{}'),
+  charts: {},
 };
 
-// ===== DATA STORE =====
-let D={
-months:['Янв','Фев','Мар','Апр','Май'],
-revenue:[885439,930320,868437,867792,741023],
-var_costs:[581917,582881,622370,637916,455283],
-margin_pct:[34,37,28,26,39],
-gross_margin_pct:[33,36,27,25,37],
-op_margin_pct:[14,20,8,5,15],
-np_margin_pct:[12,15,6,3,12],
-op_profit:[127860,183186,72295,41554,108258],
-net_profit:[108912,141929,52748,29386,91530],
-traffic_cost:[330931,322246,405541,427544,267512],
-indirect:[166037,156052,166341,178393,166061],
-interest:[21441,22410,22270,22272,20526],
-ncf_op:[106824,244010,-1982,64,185468],
-ncf_inv:[-31478,-31326,-18449,-4068,-8761],
-ncf_fin:[-97439,-116622,74215,-46042,-179115],
-dividends:[113736,148096,68154,52485,86705],
-cash:[23526,29981,40548,55751,21436],
-assets_total:[2137797,2044704,2133853,2154319,1790609],
-equity:[566262,470914,432147,471192,384487],
-liabilities:[1566380,1565430,1691582,1567792,1553098],
-lt_debt:[1079798,1128841,1160840,1062696,1042696],
-st_debt:[32759,37125,49305,38601,57401],
-kz:[453823,399463,481438,466495,453001],
-current_ratio:[3.27,3.42,3.11,3.31,2.57],
-abs_liquidity:[0.54,0.68,0.62,0.58,0.61],
-fin_stability:[0.77,0.79,0.75,0.75,0.74],
-autonomy:[0.27,0.23,0.20,0.23,0.20],
-de_ratio:[1.74,2.14,2.39,2.02,2.30],
-roe_monthly:[0.32,0.10,0.07,0.20,0],
-roa_monthly:[0.07,0.03,0.01,0.04,0],
-dfl:[-0.19,-0.28,-0.30,-0.27,-0.44],
-rev_core:[792196,796951,773422,718029,718462],
-rev_streams:[25774,44500,12140,24973,0],
-rev_influence:[66368,67403,54364,93779,40205],
-rev_mannequin:[0,21466,28511,31011,21357],
-tr_fb:[151346,141704,198056,171231,121189],
-tr_tg:[76275,84452,83207,100278,77092],
-tr_teasers:[40349,37747,46097,45320,19211],
-tr_influence:[44725,48193,38870,67052,27309],
-tr_pp:[6741,10988,24042,30000,14070],
-tr_google:[10935,8194,13412,13731,8951],
-ftd_old:[322,291,270,234,140],
-ftd_new:[675,789,726,519,194],
-ftd_total:[997,1080,996,753,334],
-crm_rev:[508411,521315,450345,545107,263391],
-crm_pct:[75,74,72,81,82],
-thresholds:[],
-notes:[],
-analysis:null,
-// Raw data from Google Sheets (null = not loaded yet)
-pnl_combo:null,
-pnl_consol:null,
-model_data:null,
-payment_data:null,
-tasks_data:null,
-ckp_data:null,
-assumptions:[]
-};
+/* ═══════════════════════════════════════════════
+   PASSWORD
+═══════════════════════════════════════════════ */
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 
-// ===== PERIOD =====
-let pFrom=0,pTo=4;
-function onPeriod(){pFrom=parseInt(document.getElementById('pFrom').value);pTo=parseInt(document.getElementById('pTo').value);if(pTo<pFrom){pTo=pFrom;document.getElementById('pTo').value=pTo}render()}
-function sl(a){return(a||[]).slice(pFrom,pTo+1)}
-function sm(a){return sl(a).reduce((s,v)=>s+(+v||0),0)}
-function gm(){return sl(D.months)}
-function li(){return pTo}
-function pi(){return pTo>0?pTo-1:null}
-function plbl(){return pFrom===pTo?D.months[pFrom]+' 2026':D.months[pFrom]+'—'+D.months[pTo]+' 2026'}
-
-// ===== DATA FETCH (Google Apps Script) =====
-let dataSource='demo';
-async function fetchData(){
-  show('Загрузка данных из Google Sheets...');
-  try{
-    const url=C.DATA_PROXY;
-    if(!url||url==='APPS_SCRIPT_URL_PLACEHOLDER'){
-      console.warn('Apps Script URL not configured, using demo data');
-      dataSource='demo';
-      render();hide();return;
-    }
-    // Apps Script Web App принимает GET с ?action=get_all
-    const r=await fetch(url+'?action=get_all',{method:'GET'});
-    const d=await r.json();
-    if(d&&d.ok){
-      // Мержим только числовые поля, сохраняем fallback для пустых
-      const fields=['months','revenue','var_costs','margin_pct','gross_margin_pct','op_margin_pct',
-        'np_margin_pct','op_profit','net_profit','traffic_cost','indirect','interest',
-        'ncf_op','ncf_inv','ncf_fin','dividends','cash','assets_total','equity','liabilities',
-        'lt_debt','st_debt','kz','current_ratio','abs_liquidity','fin_stability','autonomy',
-        'de_ratio','roe_monthly','roa_monthly','dfl','rev_core','rev_streams','rev_influence',
-        'rev_mannequin','tr_fb','tr_tg','tr_teasers','tr_influence','tr_pp','tr_google',
-        'ftd_old','ftd_new','ftd_total','crm_rev','crm_pct'];
-      fields.forEach(f=>{if(d[f]&&d[f].length>0)D[f]=d[f]});
-      // Метаданные
-      if(d.threshold_rules&&d.threshold_rules.length)D.thresholds=d.threshold_rules;
-      if(d.notes&&d.notes.length)D.notes=d.notes;
-      if(d.analysis)D.analysis=d.analysis;
-      if(d.assumptions)D.assumptions=d.assumptions;
-      if(d.pnl_combo)D.pnl_combo=d.pnl_combo;
-      if(d.pnl_consol)D.pnl_consol=d.pnl_consol;
-      if(d.model_data)D.model_data=d.model_data;
-      if(d.payment_data)D.payment_data=d.payment_data;
-      if(d.tasks_data)D.tasks_data=d.tasks_data;
-      if(d.ckp_data)D.ckp_data=d.ckp_data;
-      dataSource='live';
-      // Обновить период-селекторы если месяцев больше
-      if(D.months.length>5)updatePeriodSelectors();
-      localStorage.setItem('rocket_data',JSON.stringify(D));
-      localStorage.setItem('rocket_updated',new Date().toISOString());
-      document.getElementById('live-dot').classList.remove('offline');
-      const upd=document.getElementById('updated-at');
-      if(upd)upd.textContent='обновлено '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-    }else{
-      console.warn('Apps Script returned error:',d.error);
-      dataSource='demo';
-      document.getElementById('live-dot').classList.add('offline');
-    }
-  }catch(e){
-    console.warn('Apps Script unavailable, using cached/demo:',e);
-    dataSource='demo';
-    document.getElementById('live-dot').classList.add('offline');
+async function checkPassword() {
+  const val = document.getElementById('pwInput').value;
+  const hash = await sha256(val);
+  if (hash === CONFIG.PASSWORD_HASH) {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initApp();
+  } else {
+    document.getElementById('gateError').textContent = 'Неверный пароль';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
   }
-  render();hide();
 }
 
-async function fetchAI(){
-  show('AI анализирует данные...');
-  try{
-    if(C.AI&&C.AI!=='WEBHOOK_AI_ANALYSIS_URL'){
-      const r=await fetch(C.AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'analyze',data:D})});
-      const d=await r.json();
-      if(d&&d.analysis)D.analysis=d.analysis;
-    }
-  }catch(e){console.warn('AI webhook unavailable:',e)}
-  renderConclusions();hide();
-}
-
-function updatePeriodSelectors(){
-  const months=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-  ['pFrom','pTo'].forEach(id=>{
-    const sel=document.getElementById(id);
-    if(!sel)return;
-    sel.innerHTML=D.months.map((m,i)=>`<option value="${i}">${months[i]||m}</option>`).join('');
-  });
-  document.getElementById('pFrom').value=0;
-  document.getElementById('pTo').value=D.months.length-1;
-  pFrom=0;pTo=D.months.length-1;
-}
-
-function show(t){document.getElementById('ld-txt').textContent=t;document.getElementById('ld').classList.add('on')}
-function hide(){document.getElementById('ld').classList.remove('on')}
-
-// ===== DOWNLOAD =====
-function downloadReport(){
-  if(typeof html2canvas==='function'){show('Формирование отчёта...');html2canvas(document.getElementById('app'),{backgroundColor:'#000',scale:1.5}).then(c=>{const a=document.createElement('a');a.download='Rocket_'+new Date().toISOString().slice(0,10)+'.png';a.href=c.toDataURL();a.click();hide()}).catch(()=>{hide();window.print()})}
-  else window.print()
-}
-
-// ===== CHARTS =====
-const CH={};
-function mc(id,cfg){if(CH[id])CH[id].destroy();const c=document.getElementById(id);if(!c)return;CH[id]=new Chart(c,cfg)}
-Chart.defaults.color='rgba(215,230,190,.5)';Chart.defaults.borderColor='rgba(167,139,250,.08)';
-Chart.defaults.font.family="'JetBrains Mono',monospace";Chart.defaults.font.size=10;
-
-// ===== NOTES =====
-function noteBtn(cid){
-  const notes=(D.notes||[]).filter(n=>n.chart_id===cid);const c=notes.length;
-  return `<div class="note-btn" onclick="toggleNote('np-${cid}',event)">📝 ${c||'+'}</div>
-<div class="note-panel" id="np-${cid}">
-<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Примечания</div>
-${notes.map(n=>`<div class="note-entry"><div style="font-size:9px;color:var(--accent-dim)">${n.month||''}</div><div style="font-size:11px;margin-top:2px">${n.text||''}</div></div>`).join('')}
-<div class="note-form"><input class="note-input" id="ni-${cid}" placeholder="Добавить..." onkeydown="if(event.key==='Enter'){addNote('${cid}');event.preventDefault()}"><button class="note-submit" onclick="addNote('${cid}')">↵</button></div>
-</div>`;
-}
-function toggleNote(id,e){e.stopPropagation();document.querySelectorAll('.note-panel.open').forEach(p=>{if(p.id!==id)p.classList.remove('open')});document.getElementById(id).classList.toggle('open')}
-function addNote(cid){
-  const inp=document.getElementById('ni-'+cid),txt=inp.value.trim();
-  if(!txt)return;
-  const note={chart_id:cid,month:new Date().toISOString().slice(0,7),text:txt};
-  D.notes.push(note);inp.value='';
-  if(!C.DEMO&&C.DATA_PROXY!=='APPS_SCRIPT_URL_PLACEHOLDER'){
-    fetch(C.DATA_PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'add_note',note})}).catch(()=>{});
-  }
-  render();
-}
-document.addEventListener('click',e=>{if(!e.target.closest('.note-panel')&&!e.target.closest('.note-btn'))document.querySelectorAll('.note-panel.open').forEach(p=>p.classList.remove('open'))});
-
-// ===== DATA SOURCE BADGE =====
-function dsBadge(src){
-  return `<div class="ds-badge ${src==='live'?'live':'demo'}">${src==='live'?'● LIVE — Google Sheets':'○ DEMO — тестовые данные'}</div>`;
-}
-
-// ===== INIT =====
-function init(){
-  try{
-    const saved=localStorage.getItem('rocket_data');
-    if(saved){Object.assign(D,JSON.parse(saved));dataSource='cache'}
-    const upd=localStorage.getItem('rocket_updated');
-    if(upd){const el=document.getElementById('updated-at');if(el)el.textContent='кэш '+new Date(upd).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
-  }catch(e){}
-  buildTabs();render();
-  if(!C.DEMO&&C.DATA_PROXY!=='APPS_SCRIPT_URL_PLACEHOLDER')fetchData();
-}
-
-// ===== RENDER ALL =====
-function render(){
-  document.getElementById('ptag').textContent=plbl();
-  renderOverview();renderPnL();renderPnLCombo();renderPnLConsol();renderModel();
-  renderCF();renderBalance();renderPayment();renderTraffic();renderCKP();renderTasks();
-  renderResults();renderConclusions();
-  document.querySelectorAll('[data-reveal]:not(.revealed)').forEach(el=>{
-    const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){el.classList.add('revealed');obs.unobserve(el)}})},{threshold:.1});
-    obs.observe(el);
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+function initApp() {
+  buildTabs();
+  buildPeriodSelectors();
+  loadData();
+  document.addEventListener('click', e => {
+    if (!document.getElementById('exportWrap').contains(e.target))
+      document.getElementById('exportMenu').classList.remove('open');
   });
 }
 
-// ===== OVERVIEW =====
-function renderOverview(){
-  const rev=sm(D.revenue),np=sm(D.net_profit),vc=sm(D.var_costs),op=sm(D.op_profit);
-  const i=li(),p=pi(),m=gm();
-  const margPct=(rev-vc)/rev*100,opPct=op/rev*100,npPct=np/rev*100;
-  const tRev=F.trend(D.revenue[i],p!=null?D.revenue[p]:null,p!=null?D.months[p]:'');
-  const tCash=F.trend(D.cash[i],p!=null?D.cash[p]:null,p!=null?D.months[p]:'');
-  const lastDE=D.de_ratio[i];
-  document.getElementById('p-overview').innerHTML=`
-${dsBadge(dataSource)}
-<div class="kpi-row" data-reveal>
-  <div class="kpi"><div class="kpi-label">Выручка</div><div class="kpi-val">${F.$(rev)}</div><div class="kpi-sub ${tRev.c}">${tRev.t}</div></div>
-  <div class="kpi"><div class="kpi-label">Чистая прибыль</div><div class="kpi-val">${F.$(np)}</div><div class="kpi-sub ${npPct>10?'up':'wr'}">маржа ${F.pct(npPct)}</div></div>
-  <div class="kpi"><div class="kpi-label">Рент. маржинальная</div><div class="kpi-val">${F.pct(margPct)}</div><div class="kpi-sub nt">(Выр−Перем)/Выр</div></div>
-  <div class="kpi"><div class="kpi-label">Рент. операционная</div><div class="kpi-val">${F.pct(opPct)}</div><div class="kpi-sub ${opPct>10?'up':'wr'}">EBIT/Выр</div></div>
-  <div class="kpi"><div class="kpi-label">Рент. по ЧП</div><div class="kpi-val">${F.pct(npPct)}</div><div class="kpi-sub dn">цель 40%</div></div>
-  <div class="kpi"><div class="kpi-label">D/E</div><div class="kpi-val">${lastDE.toFixed(2)}</div><div class="kpi-sub ${lastDE>2?'dn':'up'}">долг ${F.$(D.lt_debt[i]+D.st_debt[i])}</div></div>
-  <div class="kpi"><div class="kpi-label">Кэш</div><div class="kpi-val">${F.$(D.cash[i])}</div><div class="kpi-sub ${tCash.c}">${tCash.t}</div></div>
-</div>
-<div class="grid2">
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--accent)"></span>Выручка и рент. ЧП</div>${noteBtn('revChart')}<div class="cw"><canvas id="c-rev"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--orange)"></span>Структура расходов</div><div class="cw"><canvas id="c-costs"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--green)"></span>Рентабельность (4 уровня)</div>${noteBtn('marginsChart')}<div class="cw"><canvas id="c-marg"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--red)"></span>Выручка по направлениям</div><div class="cw"><canvas id="c-dirs"></canvas></div></div>
-</div>`;
-  mc('c-rev',{type:'bar',data:{labels:m,datasets:[{label:'Выручка',data:sl(D.revenue),backgroundColor:'rgba(34,211,238,.3)',borderColor:'rgba(34,211,238,.6)',borderWidth:1,borderRadius:6,order:2},{label:'Маржа ЧП %',data:sl(D.np_margin_pct),type:'line',borderColor:'rgba(52,211,153,.8)',borderWidth:2,pointRadius:4,pointBackgroundColor:'rgba(52,211,153,.8)',yAxisID:'y1',order:1}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'$'}},y1:{position:'right',grid:{display:false},min:0,max:25,title:{display:true,text:'%'}}}}});
-  const trT=sm(D.traffic_cost),inT=sm(D.indirect),intT=sm(D.interest);
-  mc('c-costs',{type:'doughnut',data:{labels:['Трафик '+F.$(trT),'Косвенные '+F.$(inT),'Проценты '+F.$(intT)],datasets:[{data:[trT,inT,intT],backgroundColor:['rgba(34,211,238,.5)','rgba(167,139,250,.4)','rgba(248,113,113,.4)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},color:'rgba(215,230,190,.5)'}}},cutout:'60%'}});
-  mc('c-marg',{type:'bar',data:{labels:m,datasets:[{label:'Маржинальная',data:sl(D.margin_pct),backgroundColor:'rgba(34,211,238,.3)',borderRadius:3},{label:'Валовая',data:sl(D.gross_margin_pct),backgroundColor:'rgba(167,139,250,.3)',borderRadius:3},{label:'Операционная',data:sl(D.op_margin_pct),backgroundColor:'rgba(52,211,153,.3)',borderRadius:3},{label:'Чистая',data:sl(D.np_margin_pct),backgroundColor:'rgba(215,230,190,.2)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'%'}}}}});
-  mc('c-dirs',{type:'bar',data:{labels:m,datasets:[{label:'Core',data:sl(D.rev_core),backgroundColor:'rgba(34,211,238,.4)',borderRadius:3},{label:'Influence',data:sl(D.rev_influence),backgroundColor:'rgba(167,139,250,.4)',borderRadius:3},{label:'Streams',data:sl(D.rev_streams),backgroundColor:'rgba(52,211,153,.3)',borderRadius:3},{label:'Mannequin',data:sl(D.rev_mannequin),backgroundColor:'rgba(215,230,190,.2)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'$'}}}}});
+function buildTabs() {
+  const nav = document.getElementById('tabNav');
+  const main = document.getElementById('mainContent');
+  nav.innerHTML = '';
+  main.innerHTML = '';
+  TABS.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (t.id === state.activeTab ? ' active' : '');
+    btn.textContent = t.label;
+    btn.onclick = () => switchTab(t.id);
+    nav.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'panel' + (t.id === state.activeTab ? ' active' : '');
+    panel.id = 'panel-' + t.id;
+    main.appendChild(panel);
+  });
 }
 
-// ===== PNL =====
-function renderPnL(){
-  const m=gm(),rev=sl(D.revenue),vc=sl(D.var_costs),op=sl(D.op_profit),np=sl(D.net_profit);
-  const revS=sm(D.revenue),vcS=sm(D.var_costs),opS=sm(D.op_profit),intS=sm(D.interest);
-  const i=li(),p=pi(),tRev=F.trend(D.revenue[i],p!=null?D.revenue[p]:null,p!=null?D.months[p]:'');
-  document.getElementById('p-pnl').innerHTML=`
-<div class="kpi-row" data-reveal>
-  <div class="kpi"><div class="kpi-label">Выручка</div><div class="kpi-val">${F.$(revS)}</div><div class="kpi-sub ${tRev.c}">${tRev.t}</div></div>
-  <div class="kpi"><div class="kpi-label">Перем. расходы</div><div class="kpi-val">${F.$(vcS)}</div><div class="kpi-sub dn">${F.pct(vcS/revS*100)} выручки</div></div>
-  <div class="kpi"><div class="kpi-label">Маржин. рент.</div><div class="kpi-val">${F.pct((revS-vcS)/revS*100)}</div><div class="kpi-sub nt">${F.$(revS-vcS)}</div></div>
-  <div class="kpi"><div class="kpi-label">Опер. прибыль</div><div class="kpi-val">${F.$(opS)}</div><div class="kpi-sub ${opS/revS>.1?'up':'wr'}">${F.pct(opS/revS*100)}</div></div>
-  <div class="kpi"><div class="kpi-label">% кред./EBIT</div><div class="kpi-val">${F.pct(intS/opS*100)}</div><div class="kpi-sub ${intS/opS>.3?'dn':'nt'}">${F.$(intS)}</div></div>
-</div>
-<div class="card full" style="margin-bottom:14px" data-reveal><div class="card-title"><span class="dot" style="background:var(--accent)"></span>Водопад P&L</div>${noteBtn('wfChart')}<div class="cw tall"><canvas id="c-wf"></canvas></div></div>
-<div class="grid2">
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--green)"></span>Динамика выручки и ЧП</div><div class="cw"><canvas id="c-pnl-dyn"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--orange)"></span>Расходы по типам</div><div class="cw"><canvas id="c-pnl-exp"></canvas></div></div>
-</div>`;
-  const wl=['Выручка','Перем.','Маржа','Косв.','Опер.приб.','%кред.','ЧП'];
-  const avgN=m.length||1;
-  const wv=[revS/avgN/1e3,-vcS/avgN/1e3,(revS-vcS)/avgN/1e3,-sm(D.indirect)/avgN/1e3,opS/avgN/1e3,-intS/avgN/1e3,sm(D.net_profit)/avgN/1e3];
-  mc('c-wf',{type:'bar',data:{labels:wl,datasets:[{data:wv,backgroundColor:wv.map(v=>v>=0?'rgba(52,211,153,.5)':'rgba(248,113,113,.4)'),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'$K/мес (ср.)'}}}}});
-  mc('c-pnl-dyn',{type:'line',data:{labels:m,datasets:[{label:'Выручка',data:sl(D.revenue),borderColor:'rgba(34,211,238,.7)',tension:.3,fill:false},{label:'Чистая прибыль',data:sl(D.net_profit),borderColor:'rgba(52,211,153,.7)',tension:.3,fill:false},{label:'Опер. прибыль',data:sl(D.op_profit),borderColor:'rgba(167,139,250,.7)',tension:.3,fill:false}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'$'}}}}});
-  mc('c-pnl-exp',{type:'bar',data:{labels:m,datasets:[{label:'Трафик',data:sl(D.traffic_cost),backgroundColor:'rgba(34,211,238,.4)',borderRadius:3},{label:'Косвенные',data:sl(D.indirect),backgroundColor:'rgba(167,139,250,.3)',borderRadius:3},{label:'Проценты',data:sl(D.interest),backgroundColor:'rgba(248,113,113,.3)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'$'}}}}});
+function switchTab(id) {
+  state.activeTab = id;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', TABS[i].id === id);
+  });
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'panel-' + id);
+  });
+  renderCurrentTab();
 }
 
-// ===== PNL COMBO (блоки по направлениям) =====
-function renderPnLCombo(){
-  const m=gm();
-  let html=`<div class="asec" data-reveal><h3>ОПиУ — Разбивка по направлениям</h3>`;
-  if(D.pnl_combo&&Array.isArray(D.pnl_combo)&&D.pnl_combo.length>1){
-    html+=renderRawTable(D.pnl_combo,'pnl_combo_tbl');
-  } else {
-    html+=`<p style="color:var(--text-dim);font-size:12px;margin-bottom:16px">Источник: ОПиУ лист «комбо по блокам». Направления: iGaming Core, Rocket Streams, Influence, Mannequin.</p>`;
+function buildPeriodSelectors() {
+  const from = document.getElementById('periodFrom');
+  const to   = document.getElementById('periodTo');
+  DEMO.months.forEach((m, i) => {
+    from.add(new Option(m, i));
+    to.add(new Option(m, i));
+  });
+  from.value = state.fromIdx;
+  to.value   = state.toIdx;
+}
+
+function applyPeriod() {
+  state.fromIdx = parseInt(document.getElementById('periodFrom').value);
+  state.toIdx   = parseInt(document.getElementById('periodTo').value);
+  if (state.fromIdx > state.toIdx) {
+    state.toIdx = state.fromIdx;
+    document.getElementById('periodTo').value = state.toIdx;
   }
-  html+=`</div>`;
-  // Диаграммы из основных данных
-  html+=`<div class="grid2">
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--accent)"></span>Выручка по направлениям</div><div class="cw tall"><canvas id="c-combo-rev"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--green)"></span>Доля направлений в выручке</div><div class="cw tall"><canvas id="c-combo-share"></canvas></div></div>
-</div>`;
-  document.getElementById('p-pnl_combo').innerHTML=html;
-  mc('c-combo-rev',{type:'bar',data:{labels:m,datasets:[{label:'Core',data:sl(D.rev_core),backgroundColor:'rgba(34,211,238,.5)',borderRadius:3},{label:'Influence',data:sl(D.rev_influence),backgroundColor:'rgba(167,139,250,.5)',borderRadius:3},{label:'Streams',data:sl(D.rev_streams),backgroundColor:'rgba(52,211,153,.4)',borderRadius:3},{label:'Mannequin',data:sl(D.rev_mannequin),backgroundColor:'rgba(251,146,60,.4)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'$'}}}}});
-  const totals=[sm(D.rev_core),sm(D.rev_influence),sm(D.rev_streams),sm(D.rev_mannequin)];
-  mc('c-combo-share',{type:'doughnut',data:{labels:['Core '+F.$(totals[0]),'Influence '+F.$(totals[1]),'Streams '+F.$(totals[2]),'Mannequin '+F.$(totals[3])],datasets:[{data:totals,backgroundColor:['rgba(34,211,238,.5)','rgba(167,139,250,.5)','rgba(52,211,153,.4)','rgba(251,146,60,.4)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10}}}},cutout:'55%'}});
+  renderCurrentTab();
 }
 
-// ===== PNL CONSOL =====
-function renderPnLConsol(){
-  let html=`<div class="asec" data-reveal><h3>ОПиУ — Консолидация</h3>`;
-  if(D.pnl_consol&&Array.isArray(D.pnl_consol)&&D.pnl_consol.length>1){
-    html+=renderRawTable(D.pnl_consol,'pnl_consol_tbl');
-  } else {
-    html+=`<p style="color:var(--text-dim);font-size:12px">Источник: ОПиУ лист «консолидация». Консолидированный P&L по всем юрлицам.</p>`;
+function slice(arr) {
+  return arr.slice(state.fromIdx, state.toIdx + 1);
+}
+
+/* ═══════════════════════════════════════════════
+   DATA LOADING
+═══════════════════════════════════════════════ */
+async function loadData() {
+  if (CONFIG.DEMO || CONFIG.APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    state.data = DEMO;
+    document.getElementById('statusText').textContent = 'Демо-данные · ' + new Date().toLocaleTimeString('ru');
+    document.getElementById('demoBadge').style.display = 'block';
+    renderCurrentTab();
+    return;
   }
-  html+=`</div>`;
-  // Сводная диаграмма
-  const m=gm();
-  html+=`<div class="card full" data-reveal><div class="card-title"><span class="dot" style="background:var(--purple)"></span>Консолидированная P&L динамика</div><div class="cw tall"><canvas id="c-consol-dyn"></canvas></div></div>`;
-  document.getElementById('p-pnl_consol').innerHTML=html;
-  mc('c-consol-dyn',{type:'bar',data:{labels:m,datasets:[{label:'Выручка',data:sl(D.revenue),backgroundColor:'rgba(34,211,238,.3)',borderRadius:3},{label:'Маржа',data:sl(D.revenue).map((r,i)=>r-sl(D.var_costs)[i]),backgroundColor:'rgba(167,139,250,.3)',borderRadius:3},{label:'Опер. прибыль',data:sl(D.op_profit),backgroundColor:'rgba(52,211,153,.3)',borderRadius:3},{label:'ЧП',data:sl(D.net_profit),backgroundColor:'rgba(251,146,60,.3)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'$'}}}}});
-}
-
-// ===== MODEL =====
-function renderModel(){
-  const m=gm(),i=li();
-  let html=`<div class="kpi-row" data-reveal>
-  <div class="kpi"><div class="kpi-label">FTD всего (посл.)</div><div class="kpi-val">${F.n(D.ftd_total[i])}</div><div class="kpi-sub dn">↓ с ${F.n(D.ftd_total[0])}</div></div>
-  <div class="kpi"><div class="kpi-label">FTD новых</div><div class="kpi-val">${F.n(D.ftd_new[i])}</div><div class="kpi-sub dn">↓ ${F.pct((D.ftd_new[i]-D.ftd_new[0])/D.ftd_new[0]*100)}</div></div>
-  <div class="kpi"><div class="kpi-label">FTD старых</div><div class="kpi-val">${F.n(D.ftd_old[i])}</div><div class="kpi-sub dn">↓ ${F.pct((D.ftd_old[i]-D.ftd_old[0])/D.ftd_old[0]*100)}</div></div>
-  <div class="kpi"><div class="kpi-label">CRM-выручка</div><div class="kpi-val">${F.$(D.crm_rev[i])}</div><div class="kpi-sub dn">${D.crm_pct[i]}% от выручки</div></div>
-  <div class="kpi"><div class="kpi-label">Ср. ставка</div><div class="kpi-val">${D.ftd_total[i]>0?'$'+Math.round(D.revenue[i]/D.ftd_total[i]):'—'}</div><div class="kpi-sub nt">$/FTD</div></div>
-</div>`;
-  if(D.model_data&&Array.isArray(D.model_data)&&D.model_data.length>1){
-    html+=`<div class="asec" data-reveal><h3>Модель финансирования выручки</h3>${renderRawTable(D.model_data,'model_tbl')}</div>`;
+  showLoader('Загрузка данных из Google Sheets…');
+  try {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL + '?action=getData');
+    const json = await res.json();
+    state.data = { ...DEMO, ...json };
+    document.getElementById('statusText').textContent = 'Обновлено · ' + new Date().toLocaleTimeString('ru');
+    document.getElementById('demoBadge').style.display = 'none';
+    renderCurrentTab();
+  } catch(e) {
+    state.data = DEMO;
+    document.getElementById('statusText').textContent = 'Ошибка — показаны демо-данные';
+    renderCurrentTab();
   }
-  html+=`<div class="grid2">
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--accent)"></span>FTD динамика</div><div class="cw"><canvas id="c-ftd-dyn"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--red)"></span>CRM-зависимость</div><div class="cw"><canvas id="c-crm"></canvas></div></div>
-</div>`;
-  document.getElementById('p-model').innerHTML=html;
-  mc('c-ftd-dyn',{type:'bar',data:{labels:m,datasets:[{label:'FTD новых',data:sl(D.ftd_new),backgroundColor:'rgba(34,211,238,.5)',borderRadius:3},{label:'FTD старых',data:sl(D.ftd_old),backgroundColor:'rgba(167,139,250,.4)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'FTD'}}}}});
-  mc('c-crm',{type:'bar',data:{labels:m,datasets:[{label:'CRM-выручка',data:sl(D.crm_rev),backgroundColor:'rgba(248,113,113,.4)',borderRadius:3},{label:'Остальная',data:sl(D.revenue).map((r,idx)=>r-sl(D.crm_rev)[idx]),backgroundColor:'rgba(52,211,153,.3)',borderRadius:3},{label:'CRM %',data:sl(D.crm_pct),type:'line',borderColor:'rgba(251,146,60,.8)',borderWidth:2,pointRadius:4,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'$'}},y1:{position:'right',grid:{display:false},min:50,max:100,title:{display:true,text:'%'}}}}});
+  hideLoader();
 }
 
-// ===== CF =====
-function renderCF(){
-  const m=gm(),nop=sl(D.ncf_op),cb=sl(D.cash);
-  const opS=sm(D.ncf_op),invS=sm(D.ncf_inv),finS=sm(D.ncf_fin),divS=sm(D.dividends),npS=sm(D.net_profit);
-  const i=li(),p=pi(),tOp=F.trend(D.ncf_op[i],p!=null?D.ncf_op[p]:null,p!=null?D.months[p]:'');
-  document.getElementById('p-cf').innerHTML=`
-<div class="kpi-row" data-reveal>
-  <div class="kpi"><div class="kpi-label">NCF Операционный</div><div class="kpi-val">${F.$(opS)}</div><div class="kpi-sub ${tOp.c}">${tOp.t}</div></div>
-  <div class="kpi"><div class="kpi-label">NCF Инвестиционный</div><div class="kpi-val">−${F.$(Math.abs(invS))}</div><div class="kpi-sub dn">вложения</div></div>
-  <div class="kpi"><div class="kpi-label">NCF Финансовый</div><div class="kpi-val">−${F.$(Math.abs(finS))}</div><div class="kpi-sub dn">погаш.+дивид.</div></div>
-  <div class="kpi"><div class="kpi-label">Дивиденды</div><div class="kpi-val">${F.$(divS)}</div><div class="kpi-sub ${divS/npS>1?'dn':'nt'}">${F.pct(divS/npS*100)} от ЧП</div></div>
-  <div class="kpi"><div class="kpi-label">Остаток ДС</div><div class="kpi-val">${F.$(D.cash[i])}</div><div class="kpi-sub dn">крит. низко</div></div>
-</div>
-<div class="card full" data-reveal><div class="card-title"><span class="dot" style="background:var(--green)"></span>Денежные потоки</div>${noteBtn('cfChart')}<div class="cw tall"><canvas id="c-cf"></canvas></div></div>
-<div class="grid2">
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--orange)"></span>Дивиденды vs ЧП</div><div class="cw"><canvas id="c-div"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--cyan)"></span>Остаток ДС (тренд)</div><div class="cw"><canvas id="c-cash-trend"></canvas></div></div>
-</div>`;
-  mc('c-cf',{type:'bar',data:{labels:m,datasets:[{label:'Операц.',data:nop,backgroundColor:'rgba(52,211,153,.5)',borderRadius:3},{label:'Инвест.',data:sl(D.ncf_inv),backgroundColor:'rgba(167,139,250,.3)',borderRadius:3},{label:'Финанс.',data:sl(D.ncf_fin),backgroundColor:'rgba(248,113,113,.3)',borderRadius:3},{label:'Кэш',data:cb,type:'line',borderColor:'rgba(34,211,238,.7)',borderWidth:2,pointRadius:4,pointBackgroundColor:'rgba(34,211,238,.7)'}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'$'}}}}});
-  mc('c-div',{type:'bar',data:{labels:m,datasets:[{label:'Дивиденды',data:sl(D.dividends),backgroundColor:'rgba(248,113,113,.4)',borderRadius:3},{label:'ЧП',data:sl(D.net_profit),backgroundColor:'rgba(52,211,153,.4)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'$'}}}}});
-  mc('c-cash-trend',{type:'line',data:{labels:m,datasets:[{label:'Остаток ДС',data:cb,borderColor:'rgba(34,211,238,.8)',backgroundColor:'rgba(34,211,238,.05)',tension:.3,fill:true,pointRadius:5,pointBackgroundColor:'rgba(34,211,238,.8)'}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'$'}}}}});
+async function refreshData() {
+  showLoader('Обновление данных…');
+  const dot = document.getElementById('statusDot');
+  dot.classList.add('loading');
+  await loadData();
+  dot.classList.remove('loading');
+  hideLoader();
 }
 
-// ===== BALANCE =====
-function renderBalance(){
-  const i=li(),p=pi();
-  document.getElementById('p-balance').innerHTML=`
-<div class="kpi-row" data-reveal>
-  <div class="kpi"><div class="kpi-label">Активы</div><div class="kpi-val">${F.$(D.assets_total[i])}</div><div class="kpi-sub nt"></div></div>
-  <div class="kpi"><div class="kpi-label">Капитал</div><div class="kpi-val">${F.$(D.equity[i])}</div><div class="kpi-sub ${D.autonomy[i]<.3?'dn':'nt'}">${F.pct(D.autonomy[i]*100)} автономии</div></div>
-  <div class="kpi"><div class="kpi-label">Обязательства</div><div class="kpi-val">${F.$(D.liabilities[i])}</div><div class="kpi-sub dn">${F.pct(D.liabilities[i]/D.assets_total[i]*100)} баланса</div></div>
-  <div class="kpi"><div class="kpi-label">Тек. ликвидность</div><div class="kpi-val">${D.current_ratio[i].toFixed(2)}</div><div class="kpi-sub ${D.current_ratio[i]>=1.5?'up':'wr'}">норма 1.5–2.0</div></div>
-  <div class="kpi"><div class="kpi-label">Фин. устойчивость</div><div class="kpi-val">${D.fin_stability[i].toFixed(2)}</div><div class="kpi-sub ${D.fin_stability[i]>=.6?'up':'dn'}">≥ 0.6</div></div>
-</div>
-<div class="grid2">
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--accent)"></span>Коэффициенты (радар)</div><div class="cw"><canvas id="c-radar"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--orange)"></span>D/E и автономия</div><div class="cw"><canvas id="c-de"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--red)"></span>DFL (эффект фин. рычага)</div><div class="cw"><canvas id="c-dfl"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--green)"></span>Долговая структура</div><div class="cw"><canvas id="c-debt"></canvas></div></div>
-</div>`;
-  mc('c-radar',{type:'radar',data:{labels:['Тек.ликв.','Абс.ликв.','Фин.уст.','Автон.','ROE','ROA'],datasets:[{label:'Факт',data:[D.current_ratio[i],D.abs_liquidity[i],D.fin_stability[i],D.autonomy[i],D.roe_monthly[i]*100,D.roa_monthly[i]*100],borderColor:'rgba(34,211,238,.6)',backgroundColor:'rgba(34,211,238,.1)'},{label:'Норма',data:[1.75,.35,.70,.40,35,10],borderColor:'rgba(52,211,153,.4)',borderDash:[3,3],backgroundColor:'rgba(52,211,153,.05)'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{grid:{color:'rgba(167,139,250,.08)'},pointLabels:{color:'rgba(215,230,190,.5)',font:{size:9}},ticks:{display:false},suggestedMin:0}}}});
-  mc('c-de',{type:'line',data:{labels:D.months,datasets:[{label:'D/E',data:D.de_ratio,borderColor:'rgba(248,113,113,.7)',tension:.3},{label:'Автономия',data:D.autonomy,borderColor:'rgba(34,211,238,.7)',tension:.3,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:1,max:3,title:{display:true,text:'D/E'}},y1:{position:'right',grid:{display:false},min:0,max:.5,title:{display:true,text:'Автон.'}}}}});
-  mc('c-dfl',{type:'bar',data:{labels:D.months,datasets:[{label:'DFL',data:D.dfl,backgroundColor:D.dfl.map(v=>v<0?'rgba(248,113,113,.4)':'rgba(52,211,153,.4)'),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'Эффект фин. рычага'}}}}});
-  const ltD=D.lt_debt[i],stD=D.st_debt[i],kzD=D.kz[i];
-  mc('c-debt',{type:'doughnut',data:{labels:['Долгосрочный долг '+F.$(ltD),'Краткосрочный долг '+F.$(stD),'Кредиторская зад. '+F.$(kzD)],datasets:[{data:[ltD,stD,kzD],backgroundColor:['rgba(248,113,113,.5)','rgba(167,139,250,.4)','rgba(34,211,238,.4)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9},color:'rgba(215,230,190,.4)'}}},cutout:'55%'}});
-}
-
-// ===== PAYMENT CALENDAR =====
-function renderPayment(){
-  let html=`<div class="asec" data-reveal><h3>💳 Платёжный календарь</h3>`;
-  if(D.payment_data&&Array.isArray(D.payment_data)&&D.payment_data.length>1){
-    // Показываем сырую таблицу + пытаемся разобрать платежи
-    const rows=D.payment_data;
-    const headers=rows[0];
-    const dataRows=rows.slice(1).filter(r=>r.some(c=>c!==''));
-    html+=`<div class="raw-table-wrap">${renderRawTable(D.payment_data,'pay_tbl')}</div>`;
-  } else {
-    html+=`<p style="color:var(--text-dim);font-size:12px;margin-bottom:16px">Источник: Платёжный календарь — Свод + Плановый реестр.<br>После подключения Apps Script данные будут загружаться автоматически.</p>
-<div class="asec" style="border:1px dashed var(--border);background:transparent;margin-top:12px"><h3 style="font-size:13px;color:var(--text-dim)">⚠ Допущение #2</h3><p style="font-size:11px;color:var(--text-dim)">При анализе обязательно учитывать платёжный календарь — плановые платежи влияют на прогноз ДС и риск кассового разрыва.</p></div>`;
+async function refreshAI() {
+  if (CONFIG.AI_WEBHOOK_URL === 'YOUR_MAKE_AI_WEBHOOK_URL_HERE') {
+    alert('AI-анализ: укажите AI_WEBHOOK_URL в конфиге после настройки Make.com');
+    return;
   }
-  html+=`</div>
-<div class="grid2">
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--red)"></span>Исходящие платежи (YTD)</div><div class="cw"><canvas id="c-pay-out"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--green)"></span>Кэш vs Обязательства</div><div class="cw"><canvas id="c-pay-cash"></canvas></div></div>
-</div>`;
-  document.getElementById('p-payment').innerHTML=html;
-  const m=gm();
-  mc('c-pay-out',{type:'bar',data:{labels:m,datasets:[{label:'Дивиденды',data:sl(D.dividends),backgroundColor:'rgba(248,113,113,.4)',borderRadius:3},{label:'Проценты',data:sl(D.interest),backgroundColor:'rgba(167,139,250,.3)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'$'}}}}});
-  mc('c-pay-cash',{type:'line',data:{labels:m,datasets:[{label:'Кэш',data:sl(D.cash),borderColor:'rgba(34,211,238,.7)',tension:.3,fill:false},{label:'КЗ',data:sl(D.kz),borderColor:'rgba(248,113,113,.5)',tension:.3,fill:false,borderDash:[4,4]}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'$'}}}}});
+  showLoader('Запуск AI-анализа…');
+  try {
+    const res = await fetch(CONFIG.AI_WEBHOOK_URL, { method:'POST' });
+    const json = await res.json();
+    if (json.ai_analysis) {
+      state.data.ai_analysis = json.ai_analysis;
+      state.data.ai_date = new Date().toLocaleString('ru');
+    }
+    if (state.activeTab === 'ai') renderAITab();
+  } catch(e) {
+    alert('Ошибка AI-анализа: ' + e.message);
+  }
+  hideLoader();
 }
 
-// ===== TRAFFIC =====
-function renderTraffic(){
-  const m=gm(),i=li(),p=pi();
-  const trS=sm(D.traffic_cost),revS=sm(D.revenue);
-  const tTr=F.trend(D.traffic_cost[i],p!=null?D.traffic_cost[p]:null,p!=null?D.months[p]:'');
-  document.getElementById('p-traffic').innerHTML=`
-<div class="kpi-row" data-reveal>
-  <div class="kpi"><div class="kpi-label">Затраты на трафик</div><div class="kpi-val">${F.$(trS)}</div><div class="kpi-sub ${tTr.c}">${tTr.t}</div></div>
-  <div class="kpi"><div class="kpi-label">% от выручки</div><div class="kpi-val">${F.pct(trS/revS*100)}</div><div class="kpi-sub ${trS/revS>.4?'dn':'up'}">цель < 40%</div></div>
-  <div class="kpi"><div class="kpi-label">FTD новых</div><div class="kpi-val">${F.n(D.ftd_new[i])}</div><div class="kpi-sub dn">↓ с ${F.n(D.ftd_new[0])}</div></div>
-  <div class="kpi"><div class="kpi-label">CRM %</div><div class="kpi-val">${D.crm_pct[i]}%</div><div class="kpi-sub ${D.crm_pct[i]>75?'dn':'up'}">${D.crm_pct[i]>75?'крит.':'норма'}</div></div>
-  <div class="kpi"><div class="kpi-label">FTD всего</div><div class="kpi-val">${F.n(D.ftd_total[i])}</div><div class="kpi-sub nt">стар.${D.ftd_old[i]}+нов.${D.ftd_new[i]}</div></div>
-</div>
-<div class="grid2">
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--red)"></span>По каналам (YTD)</div><div class="cw"><canvas id="c-trch"></canvas></div></div>
-  <div class="card" data-reveal><div class="card-title"><span class="dot" style="background:var(--green)"></span>FTD и % CRM</div><div class="cw"><canvas id="c-ftd"></canvas></div></div>
-  <div class="card full" data-reveal><div class="card-title"><span class="dot" style="background:var(--accent)"></span>Динамика трафика по каналам</div><div class="cw tall"><canvas id="c-tr-dyn"></canvas></div></div>
-</div>`;
-  mc('c-trch',{type:'doughnut',data:{labels:['FB '+F.$(sm(D.tr_fb)),'TG '+F.$(sm(D.tr_tg)),'Тизерки '+F.$(sm(D.tr_teasers)),'Influence '+F.$(sm(D.tr_influence)),'ПП '+F.$(sm(D.tr_pp)),'Google '+F.$(sm(D.tr_google))],datasets:[{data:[sm(D.tr_fb),sm(D.tr_tg),sm(D.tr_teasers),sm(D.tr_influence),sm(D.tr_pp),sm(D.tr_google)],backgroundColor:['rgba(34,211,238,.5)','rgba(168,85,247,.4)','rgba(6,182,212,.4)','rgba(167,139,250,.4)','rgba(215,230,190,.3)','rgba(248,113,113,.3)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:9}}}},cutout:'55%'}});
-  mc('c-ftd',{type:'bar',data:{labels:m,datasets:[{label:'FTD новых',data:sl(D.ftd_new),backgroundColor:'rgba(34,211,238,.4)',borderRadius:3},{label:'FTD старых',data:sl(D.ftd_old),backgroundColor:'rgba(167,139,250,.3)',borderRadius:3},{label:'% CRM',data:sl(D.crm_pct),type:'line',borderColor:'rgba(52,211,153,.7)',borderWidth:2,pointRadius:4,pointBackgroundColor:'rgba(52,211,153,.7)',yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{stacked:true,title:{display:true,text:'FTD'}},y1:{position:'right',grid:{display:false},min:50,max:100}}}});
-  mc('c-tr-dyn',{type:'line',data:{labels:m,datasets:[{label:'FB',data:sl(D.tr_fb),borderColor:'rgba(34,211,238,.7)',tension:.3},{label:'TG',data:sl(D.tr_tg),borderColor:'rgba(168,85,247,.7)',tension:.3},{label:'Тизерки',data:sl(D.tr_teasers),borderColor:'rgba(6,182,212,.7)',tension:.3},{label:'Influence',data:sl(D.tr_influence),borderColor:'rgba(167,139,250,.7)',tension:.3},{label:'ПП',data:sl(D.tr_pp),borderColor:'rgba(215,230,190,.6)',tension:.3},{label:'Google',data:sl(D.tr_google),borderColor:'rgba(248,113,113,.6)',tension:.3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'$'}}}}});
-}
-
-// ===== CKP =====
-function renderCKP(){
-  let html=`<div class="asec" data-reveal><h3>📋 ЦКП — Дорожная карта Rocket Project 2026</h3>`;
-  if(D.ckp_data&&Array.isArray(D.ckp_data)&&D.ckp_data.length>1){
-    html+=renderRawTable(D.ckp_data,'ckp_tbl');
-    // Попытка построить диаграмму статусов
-    const rows=D.ckp_data.slice(1);
-    const statuses={done:0,wip:0,late:0,todo:0};
-    rows.forEach(r=>{
-      const s=(r[2]||r[3]||'').toString().toLowerCase();
-      if(s.includes('выполн')||s.includes('done')||s.includes('завер'))statuses.done++;
-      else if(s.includes('работ')||s.includes('wip')||s.includes('прогресс'))statuses.wip++;
-      else if(s.includes('просроч')||s.includes('late')||s.includes('задерж'))statuses.late++;
-      else statuses.todo++;
-    });
-    html+=`</div><div class="card" style="max-width:400px;margin-top:16px" data-reveal><div class="card-title"><span class="dot" style="background:var(--green)"></span>Статусы задач ЦКП</div><div class="cw short"><canvas id="c-ckp-status"></canvas></div></div>`;
-    document.getElementById('p-ckp').innerHTML=html;
-    mc('c-ckp-status',{type:'doughnut',data:{labels:['Выполнено','В работе','Просрочено','Не начато'],datasets:[{data:[statuses.done,statuses.wip,statuses.late,statuses.todo],backgroundColor:['rgba(52,211,153,.5)','rgba(251,146,60,.5)','rgba(248,113,113,.5)','rgba(100,116,139,.3)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10}}}},cutout:'50%'}});
-  } else {
-    html+=`<p style="color:var(--text-dim);font-size:12px">Данные загружаются из Google Sheets «Дорожная карта 2026», лист ЦКП.<br>Нажмите «Обновить данные» для загрузки актуальных данных.</p></div>`;
-    document.getElementById('p-ckp').innerHTML=html;
+/* ═══════════════════════════════════════════════
+   RENDER DISPATCHER
+═══════════════════════════════════════════════ */
+function renderCurrentTab() {
+  const d = state.data;
+  if (!d) return;
+  switch (state.activeTab) {
+    case 'overview':   renderOverview(d); break;
+    case 'pnl':        renderPnL(d); break;
+    case 'pnl_blocks': renderPnLBlocks(d); break;
+    case 'cashflow':   renderCashflow(d); break;
+    case 'balance':    renderBalance(d); break;
+    case 'traffic':    renderTraffic(d); break;
+    case 'consol':     renderConsol(d); break;
+    case 'model':      renderModel(d); break;
+    case 'calendar':   renderCalendar(d); break;
+    case 'tasks':      renderTasks(d); break;
+    case 'ckp':        renderCKP(d); break;
+    case 'results':    renderResults(d); break;
+    case 'ai':         renderAITab(d); break;
   }
 }
 
-// ===== TASKS =====
-function renderTasks(){
-  let html=`<div class="asec" data-reveal><h3>✅ Свод по задачам</h3>`;
-  if(D.tasks_data&&Array.isArray(D.tasks_data)&&D.tasks_data.length>1){
-    const rows=D.tasks_data;
-    const headers=rows[0];
-    const dataRows=rows.slice(1).filter(r=>r.some(c=>c!==''));
-    html+=`<div style="margin-bottom:12px">`;
-    dataRows.slice(0,30).forEach(r=>{
-      const name=r[0]||r[1]||'—';
-      const status=(r[2]||r[3]||'').toString().toLowerCase();
-      let cls='todo',lbl='Не начато';
-      if(status.includes('выполн')||status.includes('done'))cls='done',lbl='Выполнено';
-      else if(status.includes('работ')||status.includes('wip'))cls='wip',lbl='В работе';
-      else if(status.includes('просроч')||status.includes('late'))cls='late',lbl='Просрочено';
-      const owner=r[4]||r[5]||'';
-      const deadline=r[3]||r[4]||'';
-      html+=`<div class="task-item"><span class="task-status ${cls}">${lbl}</span><span class="pay-name">${name}</span>${owner?`<span style="font-size:10px;color:var(--text-dim)">${owner}</span>`:''}</div>`;
-    });
-    if(dataRows.length>30)html+=`<p style="font-size:10px;color:var(--text-dim);margin-top:8px">...и ещё ${dataRows.length-30} задач</p>`;
-    html+=`</div>`;
-  } else {
-    html+=`<p style="color:var(--text-dim);font-size:12px">Источник: Дорожная карта Rocket Project 2026 — лист «свод по задачам».<br>Статусы: выполнено / в работе / просрочено / не начато.</p>`;
-  }
-  html+=`</div>`;
-  document.getElementById('p-tasks').innerHTML=html;
+/* ═══════════════════════════════════════════════
+   NOTES SYSTEM
+═══════════════════════════════════════════════ */
+let _noteTarget = null; // { chartId, cardEl }
+
+function noteKey(chartId) {
+  return `note:${chartId}:${state.fromIdx}-${state.toIdx}`;
 }
 
-// ===== RESULTS =====
-function renderResults(){
-  const npS=sm(D.net_profit),revS=sm(D.revenue),i=li();
-  const npm=npS/revS*100;
-  const cashDays=D.cash[i]/(revS/D.months.length/30);
-  const ths=[
-    {m:'Рентабельность ЧП',v:F.pct(npm),s:npm<10?'alert':npm<15?'warning':'ok',t:npm<10?'Ниже целевого':npm<15?'В зоне внимания':'В целевом',r:1},
-    {m:'Операционная маржа',v:F.pct(sm(D.op_profit)/revS*100),s:sm(D.op_profit)/revS<.08?'alert':sm(D.op_profit)/revS<.15?'warning':'ok',t:sm(D.op_profit)/revS<.08?'Критически низкая':'Ниже целевой',r:4},
-    {m:'Маржинальность',v:F.pct((revS-sm(D.var_costs))/revS*100),s:(revS-sm(D.var_costs))/revS<.25?'alert':'ok',t:'В целевом коридоре',r:8},
-    {m:'Кэш / дн. расходы',v:cashDays.toFixed(1)+' дн',s:cashDays<5?'alert':cashDays<15?'warning':'ok',t:cashDays<5?'Угроза кассового разрыва':'Низкий запас',r:11},
-    {m:'Тек. ликвидность',v:D.current_ratio[i].toFixed(2),s:D.current_ratio[i]<1?'alert':D.current_ratio[i]<1.5?'warning':'ok',t:D.current_ratio[i]>=1.5?'В норме':'Ниже нормы',r:16},
-    {m:'Автономия',v:D.autonomy[i].toFixed(2),s:D.autonomy[i]<.2?'alert':D.autonomy[i]<.3?'warning':'ok',t:D.autonomy[i]<.2?'Критическая':'Низкая',r:20},
-    {m:'D/E',v:D.de_ratio[i].toFixed(2),s:D.de_ratio[i]>2.5?'alert':D.de_ratio[i]>1.5?'warning':'ok',t:D.de_ratio[i]>2.5?'Чрезмерный рычаг':'Повышенная нагрузка',r:23},
-    {m:'% кред./EBIT',v:F.pct(sm(D.interest)/sm(D.op_profit)*100),s:sm(D.interest)/sm(D.op_profit)>.5?'alert':sm(D.interest)/sm(D.op_profit)>.3?'warning':'ok',t:'Приемлемо',r:28},
-    {m:'Дивиденды/ЧП',v:F.pct(sm(D.dividends)/npS*100),s:sm(D.dividends)/npS>1?'alert':sm(D.dividends)/npS>.7?'warning':'ok',t:sm(D.dividends)/npS>1?'Проедание капитала':'Недостаточная капитализация',r:29},
-    {m:'CRM-доля',v:D.crm_pct[i]+'%',s:D.crm_pct[i]>75?'alert':D.crm_pct[i]>60?'warning':'ok',t:D.crm_pct[i]>75?'Крит. зависимость':'Высокая',r:33},
-    {m:'Трафик/выручка',v:F.pct(sm(D.traffic_cost)/revS*100),s:sm(D.traffic_cost)/revS>.5?'alert':sm(D.traffic_cost)/revS>.4?'warning':'ok',t:sm(D.traffic_cost)/revS>.4?'Давление':'Норма',r:37},
-    {m:'Фин. устойчивость',v:D.fin_stability[i].toFixed(2),s:D.fin_stability[i]<.6?'warning':'ok',t:D.fin_stability[i]>=.6?'В норме':'Низкая',r:32},
-    {m:'DFL',v:D.dfl[i].toFixed(2),s:D.dfl[i]<0?'alert':'ok',t:D.dfl[i]<0?'Отрицательный рычаг':'Положительный',r:0},
+function attachNote(canvasId, chartTitle) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const card = canvas.closest('.chart-card');
+  if (!card) return;
+
+  // Ensure position relative
+  card.style.position = 'relative';
+
+  // Remove existing btn if any
+  card.querySelector('.note-btn')?.remove();
+  card.querySelector('.note-display')?.remove();
+
+  // Button
+  const btn = document.createElement('button');
+  btn.className = 'note-btn';
+  btn.title = 'Добавить заметку';
+  const key = noteKey(canvasId);
+  const existing = state.notes[key];
+  btn.textContent = existing ? '📝 Заметка ✓' : '📝 Заметка';
+  if (existing) btn.classList.add('has-note');
+  btn.onclick = () => openNoteModal(canvasId, chartTitle || canvasId, card);
+  card.appendChild(btn);
+
+  // Note display
+  if (existing) {
+    const nd = document.createElement('div');
+    nd.className = 'note-display visible';
+    nd.id = 'note-display-' + canvasId;
+    nd.innerHTML = `<div class="note-meta">📝 ${existing.date}</div>${existing.text}`;
+    card.appendChild(nd);
+  }
+}
+
+function openNoteModal(chartId, title, cardEl) {
+  _noteTarget = { chartId, cardEl };
+  const key = noteKey(chartId);
+  const existing = state.notes[key];
+  document.getElementById('noteModalTitle').textContent = '📝 ' + title;
+  document.getElementById('noteModalPeriod').textContent =
+    'Период: ' + (DEMO.months[state.fromIdx] || '') + ' — ' + (DEMO.months[state.toIdx] || '');
+  document.getElementById('noteTextarea').value = existing ? existing.text : '';
+  document.getElementById('noteModal').classList.add('open');
+  setTimeout(() => document.getElementById('noteTextarea').focus(), 100);
+}
+
+function closeNoteModal() {
+  document.getElementById('noteModal').classList.remove('open');
+  _noteTarget = null;
+}
+
+function saveNote() {
+  if (!_noteTarget) return;
+  const text = document.getElementById('noteTextarea').value.trim();
+  if (!text) { deleteNote(); return; }
+  const key = noteKey(_noteTarget.chartId);
+  state.notes[key] = { text, date: new Date().toLocaleDateString('ru') };
+  localStorage.setItem('rkt_notes', JSON.stringify(state.notes));
+  // refresh button + display
+  attachNote(_noteTarget.chartId, document.getElementById('noteModalTitle').textContent.replace('📝 ',''));
+  closeNoteModal();
+}
+
+function deleteNote() {
+  if (!_noteTarget) return;
+  const key = noteKey(_noteTarget.chartId);
+  delete state.notes[key];
+  localStorage.setItem('rkt_notes', JSON.stringify(state.notes));
+  attachNote(_noteTarget.chartId, '');
+  closeNoteModal();
+}
+
+// Close modal on backdrop click
+document.addEventListener('click', e => {
+  const modal = document.getElementById('noteModal');
+  if (modal && e.target === modal) closeNoteModal();
+});
+
+/* ═══════════════════════════════════════════════
+   HELPER: CHART FACTORY
+═══════════════════════════════════════════════ */
+function makeChart(canvasId, config) {
+  if (state.charts[canvasId]) {
+    state.charts[canvasId].destroy();
+    delete state.charts[canvasId];
+  }
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return null;
+  const chart = new Chart(ctx, {
+    ...config,
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: 'rgba(255,255,255,0.6)', font: { family:'Outfit', size:11 } } },
+        tooltip: {
+          backgroundColor: 'rgba(5,15,5,0.95)',
+          borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1,
+          titleColor:'rgba(255,255,255,0.9)', bodyColor:'rgba(255,255,255,0.7)',
+          callbacks: {
+            label: ctx => {
+              const v = ctx.raw;
+              if (typeof v === 'number' && Math.abs(v) > 1000)
+                return ' ' + ctx.dataset.label + ': ' + fmt(v);
+              return ' ' + ctx.dataset.label + ': ' + (typeof v === 'number' ? v.toFixed(1) : v);
+            }
+          }
+        }
+      },
+      scales: config.type === 'bar' || config.type === 'line' ? {
+        x: { ticks: { color:'rgba(255,255,255,0.5)', font:{family:'Outfit',size:11} }, grid:{color:'rgba(255,255,255,0.05)'} },
+        y: { ticks: { color:'rgba(255,255,255,0.5)', font:{family:'JetBrains Mono',size:11}, callback: v => Math.abs(v)>=1000?fmt(v):v }, grid:{color:'rgba(255,255,255,0.07)'} }
+      } : {},
+      ...config.options,
+    }
+  });
+  state.charts[canvasId] = chart;
+  // auto-attach note button (title extracted from sibling .chart-title)
+  requestAnimationFrame(() => {
+    const cv = document.getElementById(canvasId);
+    const title = cv?.closest('.chart-card')?.querySelector('.chart-title')?.textContent || canvasId;
+    attachNote(canvasId, title);
+  });
+  return chart;
+}
+
+const COLORS = {
+  cyan:   'rgba(34,211,238,',
+  green:  'rgba(52,211,153,',
+  red:    'rgba(248,113,113,',
+  purple: 'rgba(167,139,250,',
+  orange: 'rgba(251,146,60,',
+  yellow: 'rgba(251,191,36,',
+};
+const c = (color, alpha=0.85) => COLORS[color] + alpha + ')';
+
+function fmt(n, currency = true) {
+  if (n === undefined || n === null) return '—';
+  const abs = Math.abs(n);
+  let s;
+  if (abs >= 1000000) s = (n / 1000000).toFixed(1) + 'M';
+  else if (abs >= 1000) s = (n / 1000).toFixed(0) + 'K';
+  else s = n.toFixed(0);
+  return (n < 0 ? '-' : '') + s;
+}
+
+function fmtFull(n) {
+  if (n === undefined || n === null) return '—';
+  return n.toLocaleString('ru');
+}
+
+function last(arr) { return arr[arr.length - 1]; }
+function prev(arr) { return arr.length > 1 ? arr[arr.length - 2] : arr[0]; }
+function sum(arr) { return arr.reduce((a,b) => a+b, 0); }
+function avg(arr) { return sum(arr) / arr.length; }
+
+function deltaPct(cur, prv) {
+  if (!prv) return 0;
+  return ((cur - prv) / Math.abs(prv) * 100).toFixed(1);
+}
+
+function deltaClass(val, invert = false) {
+  if (val > 0) return invert ? 'delta-neg' : 'delta-pos';
+  if (val < 0) return invert ? 'delta-pos' : 'delta-neg';
+  return 'delta-neu';
+}
+
+function kpiCard(label, value, delta, deltaLabel, inverted = false) {
+  const cls = deltaClass(parseFloat(delta), inverted);
+  const sign = parseFloat(delta) > 0 ? '+' : '';
+  return `<div class="kpi-card">
+    <div class="kpi-label">${label}</div>
+    <div class="kpi-value">${value}</div>
+    <div class="kpi-delta ${cls}">${sign}${delta}% <span style="color:var(--muted);font-size:10px">${deltaLabel}</span></div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: OVERVIEW
+═══════════════════════════════════════════════ */
+function renderOverview(d) {
+  const p = document.getElementById('panel-overview');
+  const ms = slice(d.months);
+  const rev = slice(d.revenue), np = slice(d.net_profit);
+  const opM = slice(d.op_margin_pct), npM = slice(d.np_margin_pct);
+  const mrgM = slice(d.margin_pct);
+  const csh = slice(d.cash);
+
+  const revLast = last(rev), revPrev = prev(rev);
+  const npLast = last(np), npPrev = prev(np);
+  const opMLast = last(opM);
+  const npMLast = last(npM);
+  const mrgMLast = last(mrgM);
+  const cshLast = last(csh), cshPrev = prev(csh);
+
+  const cashDays = Math.round(cshLast / (sum(slice(d.var_costs)) + sum(slice(d.indirect))) * ms.length * 30);
+
+  p.innerHTML = `
+  <div class="section-h">Ключевые показатели</div>
+  <div class="kpi-row">
+    ${kpiCard('Выручка', fmt(revLast), deltaPct(revLast, revPrev), 'к пред. мес.')}
+    ${kpiCard('Чистая прибыль', fmt(npLast), deltaPct(npLast, npPrev), 'к пред. мес.', npLast < 0)}
+    ${kpiCard('Валовая маржа', mrgMLast.toFixed(1) + '%', (mrgMLast - last(slice(d.margin_pct).slice(0,-1) || [mrgMLast])).toFixed(1), 'п.п.', false)}
+    ${kpiCard('Операц. маржа', opMLast.toFixed(1) + '%', (opMLast - (slice(d.op_margin_pct).slice(-2)[0] || opMLast)).toFixed(1), 'п.п.', opMLast < 10)}
+    ${kpiCard('Маржа по ЧП', npMLast.toFixed(1) + '%', (npMLast - (slice(d.np_margin_pct).slice(-2)[0] || npMLast)).toFixed(1), 'п.п.', npMLast < 0)}
+    ${kpiCard('Кэш остаток', fmt(cshLast), deltaPct(cshLast, cshPrev), 'к пред. мес.', false)}
+    ${kpiCard('Дней кэша', cashDays + ' дн.', '', '', cashDays < 15)}
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card wide">
+      <div class="chart-title">Выручка и чистая прибыль</div>
+      <div class="chart-wrap tall"><canvas id="ch_rev_np"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Маржинальность (%)</div>
+      <div class="chart-wrap"><canvas id="ch_margins"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Структура расходов</div>
+      <div class="chart-wrap"><canvas id="ch_costs_donut"></canvas></div>
+    </div>
+  </div>`;
+
+  makeChart('ch_rev_np', {
+    type: 'bar',
+    data: {
+      labels: ms,
+      datasets: [
+        { label: 'Выручка', data: rev, backgroundColor: c('cyan',0.6), borderColor: c('cyan'), borderWidth:1, order:2 },
+        { label: 'Чист. прибыль', data: np, type:'line', borderColor: c('green'), backgroundColor:'transparent', borderWidth:2.5, pointRadius:4, pointBackgroundColor:c('green'), tension:0.3, order:1 },
+      ]
+    }
+  });
+
+  makeChart('ch_margins', {
+    type: 'line',
+    data: {
+      labels: ms,
+      datasets: [
+        { label: 'Вал. маржа', data: mrgM, borderColor: c('cyan'), backgroundColor:'transparent', borderWidth:2, tension:0.3, pointRadius:3 },
+        { label: 'Операц.', data: opM, borderColor: c('yellow'), backgroundColor:'transparent', borderWidth:2, tension:0.3, pointRadius:3 },
+        { label: 'По ЧП', data: npM, borderColor: c('green'), backgroundColor:'transparent', borderWidth:2, tension:0.3, pointRadius:3 },
+      ]
+    },
+    options: { scales: { y: { ticks: { callback: v => v+'%' } } } }
+  });
+
+  const vcLast = slice(d.var_costs), indLast = slice(d.indirect);
+  makeChart('ch_costs_donut', {
+    type: 'doughnut',
+    data: {
+      labels: ['Трафик/переменные', 'Постоянные', 'Проценты'],
+      datasets: [{
+        data: [sum(vcLast), sum(indLast), slice(d.interest).reduce((a,b)=>a+b,0)],
+        backgroundColor: [c('red',0.7), c('purple',0.7), c('orange',0.7)],
+        borderColor: ['rgba(0,0,0,0.3)'],
+        borderWidth: 1
+      }]
+    },
+    options: { plugins: { legend: { position:'bottom' } } }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: P&L
+═══════════════════════════════════════════════ */
+function renderPnL(d) {
+  const p = document.getElementById('panel-pnl');
+  const ms = slice(d.months);
+  const rev = slice(d.revenue), vc = slice(d.var_costs), ind = slice(d.indirect);
+  const op = slice(d.op_profit), int_ = slice(d.interest), np = slice(d.net_profit);
+  const gross = rev.map((v,i) => v - vc[i]);
+
+  const rows = [
+    { label:'Выручка', vals: rev, bold:true },
+    { label:'Переменные расходы (трафик)', vals: vc.map(v=>-v), cls:'neg-row' },
+    { label:'ВАЛОВАЯ ПРИБЫЛЬ', vals: gross, section:true },
+    { label:'  Валовая маржа, %', vals: rev.map((v,i) => (gross[i]/v*100).toFixed(1)+'%'), muted:true },
+    { label:'Постоянные расходы', vals: ind.map(v=>-v), cls:'neg-row' },
+    { label:'EBIT (Операц. прибыль)', vals: op, section:true },
+    { label:'  Операц. маржа, %', vals: rev.map((v,i) => (op[i]/v*100).toFixed(1)+'%'), muted:true },
+    { label:'Процентные расходы', vals: int_.map(v=>-v), cls:'neg-row' },
+    { label:'ЧИСТАЯ ПРИБЫЛЬ', vals: np, section:true, alert: np[np.length-1] < 0 },
+    { label:'  Маржа ЧП, %', vals: rev.map((v,i) => (np[i]/v*100).toFixed(1)+'%'), muted:true },
   ];
-  // Если есть живые threshold_rules из Google Sheets — используем их
-  if(D.thresholds&&D.thresholds.length>0){
-    // TODO: merge with live thresholds
-  }
-  let thHtml=ths.map(t=>`<div class="th-item ${t.s}"><div class="th-dot"></div><div><div class="th-lbl">${t.m}: ${t.v} ${t.r?'<span class="basis">#'+t.r+'</span>':''}</div><div class="th-txt">${t.t}</div></div></div>`).join('');
-  let toolsHtml=`<div style="color:var(--text-dim);font-size:11px;margin-bottom:10px">Данные из Google Apps Script · <a href="${C.TOOLS}" target="_blank" style="color:var(--accent);text-decoration:underline">Открыть ↗</a></div><div class="embed-card" id="tools-embed"><div style="color:var(--text-dim);font-size:11px;padding:20px;text-align:center">Загрузка данных о внедрённости инструментов...</div></div>`;
-  document.getElementById('p-results').innerHTML=`
-<div class="asec" data-reveal><h3>🔧 Внедрённость инструментов</h3>${toolsHtml}</div>
-<div class="asec" data-reveal><h3>📊 Пороговые показатели (${ths.length} правил)</h3><div class="th-grid">${thHtml}</div></div>
-<div class="kpi-row" data-reveal style="margin-top:16px">
-  <div class="kpi"><div class="kpi-label">Маржа ЧП (цель 40%)</div><div class="kpi-val">${F.pct(npm)}</div><div class="kpi-sub dn">цель Алексей</div></div>
-  <div class="kpi"><div class="kpi-label">ROE (мес)</div><div class="kpi-val">${F.pct(D.roe_monthly[i]*100)}</div><div class="kpi-sub nt">цель ≥10%</div></div>
-  <div class="kpi"><div class="kpi-label">ROA (мес)</div><div class="kpi-val">${F.pct(D.roa_monthly[i]*100)}</div><div class="kpi-sub nt">цель 5-20%</div></div>
-  <div class="kpi"><div class="kpi-label">Автономия</div><div class="kpi-val">${D.autonomy[i].toFixed(2)}</div><div class="kpi-sub ${D.autonomy[i]<.3?'dn':'up'}">цель ≥0.40</div></div>
-  <div class="kpi"><div class="kpi-label">Кэш-дней</div><div class="kpi-val">${cashDays.toFixed(1)}</div><div class="kpi-sub ${cashDays<5?'dn':'wr'}">цель ≥15</div></div>
-</div>`;
-  fetch(C.TOOLS).then(r=>r.text()).then(html=>{const el=document.getElementById('tools-embed');if(el)el.innerHTML=html}).catch(()=>{});
-}
 
-// ===== CONCLUSIONS =====
-function renderConclusions(){
-  // Если есть AI анализ из Google Sheets — показываем его
-  let aiHtml='';
-  if(D.analysis&&D.analysis.text){
-    aiHtml=`<div class="asec" data-reveal style="border-color:rgba(167,139,250,.3)">
-  <h3 style="color:var(--purple)">🤖 AI Анализ (обновлено ${D.analysis.updated_at||''})</h3>
-  <div style="font-size:13px;line-height:1.7;white-space:pre-wrap">${D.analysis.text}</div>
-</div>`;
-  }
-  document.getElementById('p-conclusions').innerHTML=`
-${aiHtml}
-<div class="asec" data-reveal>
-  <h3 style="margin-bottom:8px">Аналитический отчёт</h3>
-  <p style="font-size:11px;color:var(--text-dim);margin-bottom:20px">Каждый вывод проходит цепочку: <strong style="color:var(--accent)">📊 Факт</strong> → <strong style="color:var(--orange)">🔍 Причина</strong> → <strong style="color:var(--red)">🔮 Прогноз</strong> → <strong style="color:var(--green)">🎯 Решение</strong></p>
-</div>
-<div class="asec" data-reveal>
-  <h3>1. Истощение CRM-базы и зависимость от ретеншна</h3>
-  <div class="finding"><span class="finding-num">📊</span><strong>Факт.</strong><p>Доля CRM-выручки: 75% → 82% за 5 мес. FTD c новых клиентов: 675 → 194 (−71%). FTD со старых: 322 → 140 (−57%). CRM-выручка в апреле $545K — рекорд, но в мае уже $263K.</p></div>
-  <div class="finding"><span class="finding-num" style="color:var(--orange)">🔍</span><strong>Причина.</strong><p>Новый трафик неэффективен: каналы FB и TG перегреты, ставки растут при падении конверсии. Компания компенсирует падение нового трафика «выжиманием» накопленной базы 91.5K игроков.</p></div>
-  <div class="finding"><span class="finding-num" style="color:var(--red)">🔮</span><strong>Прогноз.</strong><p>FTD со старых: тренд линейный (322→140 за 5 мес). При сохранении темпа к сентябрю FTD со старых → ~50. CRM-выручка упадёт на 40–50%. Общая выручка снизится до $500–550K/мес без новых источников.</p></div>
-  <div class="rec imp"><h4>🎯 Решение: Масштабировать Mannequin + диверсификация</h4><p>Mannequin: стабильная маржа 29%, текущие $21–31K/мес → цель $50K/мес к октябрю. Реактивировать Rocket Streams. Снижает CRM-зависимость с 82% до 70%.</p><div class="basis">Правило #33: CRM > 75% → ALERT · Правило #41: FTD MoM < −25% → ALERT</div></div>
-</div>
-<div class="asec" data-reveal>
-  <h3>2. Кассовый разрыв и дивидендная политика</h3>
-  <div class="finding"><span class="finding-num">📊</span><strong>Факт.</strong><p>Остаток ДС $21.4K при месячных расходах ~$700K = 0.9 дня покрытия. Дивиденды YTD $469K при ЧП $316K (коэфф. 1.49x). NCF финансовый в мае = −$179K.</p></div>
-  <div class="finding"><span class="finding-num" style="color:var(--orange)">🔍</span><strong>Причина.</strong><p>Бизнес генерирует кэш (NCF операц. $185K в мае), но он немедленно уходит на дивиденды и обслуживание долга. Дивидендная политика не привязана к ЧП.</p></div>
-  <div class="finding"><span class="finding-num" style="color:var(--red)">🔮</span><strong>Прогноз.</strong><p>Текущий буфер 0.9 дня. Любая задержка выплаты от партнёрских сетей = кассовый разрыв. Вероятность в ближайшие 60 дней: высокая.</p></div>
-  <div class="rec urg"><h4>🎯 Решение: Мораторий на дивиденды + кэш-буфер</h4><p>Ограничить дивиденды до 40% ЧП (~$126K вместо $469K). Экономия $343K → формирование буфера 15–20 дней за 2–3 месяца.</p><div class="basis">Правило #11: Кэш < 5 дней → ALERT · Правило #29: Дивиденды/ЧП > 100% → ALERT</div></div>
-</div>
-<div class="asec" data-reveal>
-  <h3>3. Отрицательный финансовый рычаг</h3>
-  <div class="finding"><span class="finding-num">📊</span><strong>Факт.</strong><p>DFL отрицательный все 5 месяцев: −0.19 → −0.44. D/E = 2.30. Долгосрочные займы $1.04M под 19–30%. Процентные расходы YTD $87K = 22% от EBIT.</p></div>
-  <div class="finding"><span class="finding-num" style="color:var(--orange)">🔍</span><strong>Причина.</strong><p>ROA (1–7%) значительно ниже стоимости заёмного капитала (19–30%). Каждый привлечённый доллар кредита снижает ROE.</p></div>
-  <div class="finding"><span class="finding-num" style="color:var(--red)">🔮</span><strong>Прогноз.</strong><p>При DFL = −0.44 и дивидендах > ЧП, собственный капитал продолжит сокращаться. Автономия (0.20) приближается к зоне банкротства (< 0.15).</p></div>
-  <div class="rec imp"><h4>🎯 Решение: Реструктуризация долга</h4><p>Рефинансировать ≥$500K с 19–30% на ≤12%. Экономия $35–50K/год на процентах, DFL → 0.</p><div class="basis">Правило #23: D/E > 2.5 → ALERT · Правило #20: Автономия < 0.20 → ALERT</div></div>
-</div>
-<div class="asec" data-reveal>
-  <h3>4. Неэффективность FB-канала</h3>
-  <div class="finding"><span class="finding-num">📊</span><strong>Факт.</strong><p>FB — 42% всех затрат на трафик ($784K YTD). В марте-апреле трафик/выручка достигал 48–52%.</p></div>
-  <div class="finding"><span class="finding-num" style="color:var(--orange)">🔍</span><strong>Причина.</strong><p>Рост ставок FB при падении конверсии. CPL растёт, FTD с новых падает. Нет еженедельного ROI-контроля.</p></div>
-  <div class="finding"><span class="finding-num" style="color:var(--red)">🔮</span><strong>Прогноз.</strong><p>Без лимита FB продолжит поглощать 40–50% выручки в слабые месяцы, обнуляя операционную маржу.</p></div>
-  <div class="rec urg"><h4>🎯 Решение: FB cap $120K/мес + перераспределение</h4><p>Установить лимит $120K/мес, внедрить еженедельный ROI-контроль. Перераспределить $50K/мес в TG Ads.</p><div class="basis">Правило #36: Трафик/выручка > 50% → ALERT · Правило #37: 40–50% → WARNING</div></div>
-</div>
-<div class="asec" data-reveal>
-  <h3>5. Стратегический вектор: ПВТ и институциональное финансирование</h3>
-  <div class="finding"><span class="finding-num">📊</span><strong>Факт.</strong><p>Компания работает 5+ лет, 150+ сотрудников, НМА $428–468K. Нет зарегистрированного юрлица в ПВТ.</p></div>
-  <div class="finding"><span class="finding-num" style="color:var(--orange)">🔍</span><strong>Причина.</strong><p>Операции разделены между Кипром и Беларусью без консолидированного юрлица. Это блокирует доступ к субсидированному кредитованию (ПВТ: 5–9%) и европейским грантам.</p></div>
-  <div class="finding"><span class="finding-num" style="color:var(--red)">🔮</span><strong>Прогноз.</strong><p>Без ПВТ стоимость капитала останется 19%+ → DFL продолжит быть отрицательным.</p></div>
-  <div class="rec str"><h4>🎯 Решение: Регистрация юрлица в ПВТ</h4><p>IP-портфель (НМА $468K) достаточен для квалификации. Горизонт: 3–6 мес. Стоимость капитала 19% → 7–9%, экономия $80–120K/год.</p><div class="basis">Стратегический · НМА из Баланса · Допущение: ПВТ-резиденты iGaming получают ставки 5–9%</div></div>
-</div>`;
-}
+  const totals = { rev: sum(rev), vc: sum(vc), gross: sum(gross), op: sum(op), np: sum(np) };
 
-// ===== HELPER: RENDER RAW TABLE FROM 2D ARRAY =====
-function renderRawTable(data,id){
-  if(!data||!data.length)return'';
-  const headers=data[0];
-  const rows=data.slice(1).filter(r=>r.some(c=>c!==''&&c!==null&&c!==undefined));
-  if(!rows.length)return'<p style="color:var(--text-dim);font-size:11px">Нет данных</p>';
-  let html=`<div class="raw-table-wrap"><table class="dt" id="${id}"><thead><tr>${headers.map(h=>`<th>${h||''}</th>`).join('')}</tr></thead><tbody>`;
-  rows.slice(0,100).forEach(r=>{
-    html+=`<tr>${headers.map((_,ci)=>{
-      const v=r[ci];
-      if(v===null||v===undefined||v==='')return`<td></td>`;
-      const n=parseFloat(v);
-      if(!isNaN(n)&&v!==''){
-        const cls=n<0?'dn':n>0?'':'nt';
-        return`<td class="${cls}">${typeof v==='number'?v.toLocaleString('ru-RU'):v}</td>`;
-      }
-      return`<td>${v}</td>`;
-    }).join('')}</tr>`;
+  p.innerHTML = `
+  <div class="kpi-row">
+    ${kpiCard('Выручка YTD', fmt(totals.rev), '', '')}
+    ${kpiCard('Вал. прибыль YTD', fmt(totals.gross), '', '')}
+    ${kpiCard('EBIT YTD', fmt(totals.op), '', '')}
+    ${kpiCard('ЧП YTD', fmt(totals.np), '', '', totals.np<0)}
+    ${kpiCard('Ср. маржа ЧП', avg(slice(d.np_margin_pct)).toFixed(1)+'%', '', '')}
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card wide">
+      <div class="chart-title">Каскад P&L — выручка, маржа, прибыль</div>
+      <div class="chart-wrap tall"><canvas id="ch_pnl_cascade"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-bottom:16px">
+    <div class="chart-title">Детализация P&L</div>
+    <div style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr>
+        <th style="min-width:220px">Статья</th>
+        ${ms.map(m=>`<th>${m}</th>`).join('')}
+        <th>Итого</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(row => {
+          const cls = row.section ? 'section-row' : (row.alert ? 'alert-row' : '');
+          const vals = row.vals;
+          const tot = typeof vals[0] === 'number' ? fmt(sum(vals)) : '—';
+          return `<tr class="${cls}">
+            <td style="${row.bold?'font-weight:700':''} ${row.muted?'color:var(--muted)':''}">${row.label}</td>
+            ${vals.map(v => {
+              if (typeof v === 'string') return `<td class="muted-val">${v}</td>`;
+              const cls2 = v < 0 ? 'neg' : (v === 0 ? 'muted-val' : 'pos');
+              return `<td class="${cls2}">${fmtFull(v)}</td>`;
+            }).join('')}
+            <td style="font-weight:600">${tot}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Прибыльность по месяцам</div>
+      <div class="chart-wrap"><canvas id="ch_profit_bars"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Структура расходов по месяцам</div>
+      <div class="chart-wrap"><canvas id="ch_costs_stack"></canvas></div>
+    </div>
+  </div>`;
+
+  makeChart('ch_pnl_cascade', {
+    type: 'bar',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'Выручка', data:rev, backgroundColor:c('cyan',0.5), borderColor:c('cyan'), borderWidth:1 },
+        { label:'Вал. прибыль', data:gross, backgroundColor:c('green',0.5), borderColor:c('green'), borderWidth:1 },
+        { label:'EBIT', data:op, backgroundColor:c('yellow',0.5), borderColor:c('yellow'), borderWidth:1 },
+        { label:'ЧП', data:np, backgroundColor:np.map(v=>v>=0?c('purple',0.5):'rgba(248,113,113,0.5)'), borderColor:np.map(v=>v>=0?c('purple'):c('red')), borderWidth:1 },
+      ]
+    }
   });
-  if(rows.length>100)html+=`<tr><td colspan="${headers.length}" style="color:var(--text-dim);text-align:center">...и ещё ${rows.length-100} строк</td></tr>`;
-  html+=`</tbody></table></div>`;
-  return html;
+
+  makeChart('ch_profit_bars', {
+    type: 'bar',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'EBIT', data:op, backgroundColor:c('yellow',0.6), borderWidth:0 },
+        { label:'ЧП', data:np, backgroundColor:np.map(v=>v>=0?c('green',0.6):'rgba(248,113,113,0.6)'), borderWidth:0 },
+      ]
+    }
+  });
+
+  makeChart('ch_costs_stack', {
+    type: 'bar',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'Переменные', data:vc, backgroundColor:c('red',0.6), borderWidth:0 },
+        { label:'Постоянные', data:ind, backgroundColor:c('purple',0.6), borderWidth:0 },
+        { label:'Проценты', data:int_, backgroundColor:c('orange',0.6), borderWidth:0 },
+      ]
+    },
+    options: { scales: { x: { stacked:true }, y: { stacked:true } } }
+  });
 }
 
-// ===== AUTO INIT =====
-if(C.DEMO){document.getElementById('auth').style.display='none';document.getElementById('app').style.display='block';init()}
+/* ═══════════════════════════════════════════════
+   TAB: P&L BLOCKS
+═══════════════════════════════════════════════ */
+function renderPnLBlocks(d) {
+  const p = document.getElementById('panel-pnl_blocks');
+  const ms = slice(d.months);
+  const core = slice(d.rev_core), inf = slice(d.rev_influence);
+  const str = slice(d.rev_streams), mann = slice(d.rev_mannequin);
+
+  p.innerHTML = `
+  <div class="section-h">Выручка по направлениям</div>
+  <div class="kpi-row">
+    ${kpiCard('Core', fmt(last(core)), deltaPct(last(core),prev(core)), 'к пред.')}
+    ${kpiCard('Influence', fmt(last(inf)), deltaPct(last(inf),prev(inf)), 'к пред.')}
+    ${kpiCard('Streams', fmt(last(str)), deltaPct(last(str),prev(str)), 'к пред.')}
+    ${kpiCard('Mannequin', fmt(last(mann)), deltaPct(last(mann),prev(mann)), 'к пред.', false)}
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card wide">
+      <div class="chart-title">Выручка по направлениям (динамика)</div>
+      <div class="chart-wrap tall"><canvas id="ch_rev_blocks"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Структура выручки (последний период)</div>
+      <div class="chart-wrap"><canvas id="ch_rev_donut"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Доля направлений (%)</div>
+      <div class="chart-wrap"><canvas id="ch_rev_share"></canvas></div>
+    </div>
+  </div>`;
+
+  makeChart('ch_rev_blocks', {
+    type: 'bar',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'Core',     data:core, backgroundColor:c('cyan',0.65), borderWidth:0 },
+        { label:'Influence',data:inf,  backgroundColor:c('purple',0.65), borderWidth:0 },
+        { label:'Streams',  data:str,  backgroundColor:c('yellow',0.65), borderWidth:0 },
+        { label:'Mannequin',data:mann, backgroundColor:c('green',0.65), borderWidth:0 },
+      ]
+    },
+    options: { scales: { x:{stacked:true}, y:{stacked:true} } }
+  });
+
+  const lastCore=last(core),lastInf=last(inf),lastStr=last(str),lastMann=last(mann);
+  makeChart('ch_rev_donut', {
+    type: 'doughnut',
+    data: {
+      labels: ['Core','Influence','Streams','Mannequin'],
+      datasets: [{ data:[lastCore,lastInf,lastStr,lastMann],
+        backgroundColor:[c('cyan',0.75),c('purple',0.75),c('yellow',0.75),c('green',0.75)], borderWidth:1 }]
+    },
+    options: { plugins: { legend: { position:'bottom' } } }
+  });
+
+  const totals = core.map((_,i) => core[i]+inf[i]+str[i]+mann[i]);
+  makeChart('ch_rev_share', {
+    type: 'line',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'Core %',      data:core.map((v,i)=>(v/totals[i]*100).toFixed(1)), borderColor:c('cyan'), fill:false, borderWidth:2, tension:0.3 },
+        { label:'Influence %', data:inf.map((v,i)=>(v/totals[i]*100).toFixed(1)),  borderColor:c('purple'), fill:false, borderWidth:2, tension:0.3 },
+        { label:'Mannequin %', data:mann.map((v,i)=>(v/totals[i]*100).toFixed(1)),borderColor:c('green'), fill:false, borderWidth:2, tension:0.3 },
+      ]
+    },
+    options: { scales: { y: { ticks: { callback: v => v+'%' } } } }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: CASH FLOW
+═══════════════════════════════════════════════ */
+function renderCashflow(d) {
+  const p = document.getElementById('panel-cashflow');
+  const ms = slice(d.months);
+  const op = slice(d.ncf_op), inv = slice(d.ncf_inv), fin = slice(d.ncf_fin);
+  const div = slice(d.dividends), csh = slice(d.cash);
+  const net = op.map((_,i) => op[i]+inv[i]+fin[i]);
+
+  p.innerHTML = `
+  <div class="kpi-row">
+    ${kpiCard('NCF операц.', fmt(last(op)), deltaPct(last(op),prev(op)), 'к пред.', last(op)<0)}
+    ${kpiCard('NCF инвест.', fmt(last(inv)), deltaPct(last(inv),prev(inv)), 'к пред.')}
+    ${kpiCard('NCF финанс.', fmt(last(fin)), deltaPct(last(fin),prev(fin)), 'к пред.')}
+    ${kpiCard('Остаток ДС', fmt(last(csh)), deltaPct(last(csh),prev(csh)), 'к пред.')}
+    ${kpiCard('Дивиденды', fmt(last(div)), '', '')}
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card wide">
+      <div class="chart-title">Денежные потоки и остаток ДС</div>
+      <div class="chart-wrap tall"><canvas id="ch_cf_main"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Структура потоков</div>
+      <div class="chart-wrap"><canvas id="ch_cf_bar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Дивиденды vs NCF операц.</div>
+      <div class="chart-wrap"><canvas id="ch_div_ratio"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Детализация ДДС</div>
+    <div style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr><th style="min-width:200px">Статья</th>${ms.map(m=>`<th>${m}</th>`).join('')}<th>Итого</th></tr></thead>
+      <tbody>
+        ${[
+          { label:'Остаток НА НАЧАЛО', vals:csh.map((_,i) => i===0 ? csh[0]-net[0] : csh[i-1]) },
+          { label:'NCF операционный', vals:op },
+          { label:'NCF инвестиционный', vals:inv },
+          { label:'NCF финансовый', vals:fin },
+          { label:'  в т.ч. дивиденды', vals:div.map(v=>-v) },
+          { label:'ОСТАТОК НА КОНЕЦ', vals:csh, section:true },
+        ].map(row => {
+          const cls = row.section ? 'section-row' : '';
+          const tot = typeof row.vals[0] === 'number' ? fmt(sum(row.vals)) : '—';
+          return `<tr class="${cls}"><td>${row.label}</td>
+            ${row.vals.map(v=>{const c2=v<0?'neg':v>0?'pos':'muted-val';return`<td class="${c2}">${fmtFull(v)}</td>`}).join('')}
+            <td style="font-weight:600">${tot}</td></tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>
+  </div>`;
+
+  makeChart('ch_cf_main', {
+    type: 'bar',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'NCF операц.',  data:op,  backgroundColor:c('green',0.6), borderWidth:0 },
+        { label:'NCF инвест.',  data:inv, backgroundColor:c('orange',0.6), borderWidth:0 },
+        { label:'NCF финанс.',  data:fin, backgroundColor:c('purple',0.6), borderWidth:0 },
+        { label:'Остаток ДС', data:csh, type:'line', borderColor:c('cyan'), backgroundColor:'transparent', borderWidth:2.5, pointRadius:4, yAxisID:'y2', tension:0.3 },
+      ]
+    },
+    options: { scales: {
+      x:{}, y:{}, y2:{ position:'right', grid:{drawOnChartArea:false}, ticks:{color:'rgba(34,211,238,0.7)',callback:v=>fmt(v)} }
+    }}
+  });
+
+  makeChart('ch_cf_bar', {
+    type: 'bar',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'Операц.',  data:op,  backgroundColor:c('green',0.65), borderWidth:0 },
+        { label:'Инвест.',  data:inv, backgroundColor:c('orange',0.65), borderWidth:0 },
+        { label:'Финанс.',  data:fin, backgroundColor:c('purple',0.65), borderWidth:0 },
+      ]
+    },
+    options: { scales: { x:{stacked:true}, y:{stacked:true} } }
+  });
+
+  makeChart('ch_div_ratio', {
+    type: 'bar',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'NCF операц.', data:op, backgroundColor:c('green',0.5), borderWidth:0 },
+        { label:'Дивиденды', data:div.map(v=>-v), backgroundColor:c('red',0.5), borderWidth:0 },
+      ]
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: BALANCE
+═══════════════════════════════════════════════ */
+function renderBalance(d) {
+  const p = document.getElementById('panel-balance');
+  const ms = slice(d.months);
+  const at = slice(d.assets_total), eq = slice(d.equity), li = slice(d.liabilities);
+  const cr = slice(d.current_ratio), au = slice(d.autonomy);
+  const de = slice(d.de_ratio), dfl_ = slice(d.dfl);
+
+  p.innerHTML = `
+  <div class="kpi-row">
+    ${kpiCard('Активы', fmt(last(at)), deltaPct(last(at),prev(at)), 'к пред.')}
+    ${kpiCard('Капитал', fmt(last(eq)), deltaPct(last(eq),prev(eq)), 'к пред.')}
+    ${kpiCard('Обязательства', fmt(last(li)), deltaPct(last(li),prev(li)), 'к пред.', true)}
+    ${kpiCard('Ликвидность', last(cr).toFixed(2), (last(cr)-prev(cr)).toFixed(2), 'п.п.', last(cr)<1.5)}
+    ${kpiCard('Автономия', last(au).toFixed(3), (last(au)-prev(au)).toFixed(3), 'п.п.', last(au)<0.4)}
+    ${kpiCard('D/E', last(de).toFixed(2), (last(de)-prev(de)).toFixed(2), 'п.п.', last(de)>1.5)}
+    ${kpiCard('DFL', last(dfl_).toFixed(2), (last(dfl_)-prev(dfl_)).toFixed(2), 'к пред.', last(dfl_)>2)}
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card wide">
+      <div class="chart-title">Структура баланса</div>
+      <div class="chart-wrap"><canvas id="ch_bal_struct"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Финансовые коэффициенты</div>
+      <div class="chart-wrap"><canvas id="ch_ratios_radar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Долговая нагрузка (D/E, DFL)</div>
+      <div class="chart-wrap"><canvas id="ch_debt_line"></canvas></div>
+    </div>
+  </div>`;
+
+  makeChart('ch_bal_struct', {
+    type: 'bar',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'Капитал',        data:eq, backgroundColor:c('green',0.6), borderWidth:0 },
+        { label:'Обязательства',  data:li, backgroundColor:c('red',0.5), borderWidth:0 },
+      ]
+    },
+    options: { scales: { x:{stacked:true}, y:{stacked:true} } }
+  });
+
+  const lastCR = last(cr), lastAU = last(au), lastDE = last(de), lastDFL = last(dfl_);
+  makeChart('ch_ratios_radar', {
+    type: 'radar',
+    data: {
+      labels: ['Ликвидность', 'Автономия', 'D/E (инв.)', 'DFL (инв.)', 'ЧП маржа'],
+      datasets: [
+        { label:'Факт', data:[
+            Math.min(lastCR/2.5*100, 100),
+            Math.min(lastAU/0.6*100, 100),
+            Math.max(0, (1 - lastDE/2)*100),
+            Math.max(0, (1 - lastDFL/3)*100),
+            Math.max(0, Math.min((last(slice(d.np_margin_pct))+15)/30*100, 100))
+          ],
+          borderColor: c('cyan'), backgroundColor: c('cyan',0.15), borderWidth:2, pointRadius:4
+        },
+        { label:'Норма (100%)', data:[100,100,100,100,100],
+          borderColor: c('green',0.5), backgroundColor: 'transparent',
+          borderDash:[5,5], borderWidth:1, pointRadius:0
+        }
+      ]
+    },
+    options: {
+      scales: { r: {
+        angleLines:{color:'rgba(255,255,255,0.1)'},
+        grid:{color:'rgba(255,255,255,0.1)'},
+        ticks:{display:false},
+        pointLabels:{color:'rgba(255,255,255,0.7)',font:{size:11,family:'Outfit'}}
+      }}
+    }
+  });
+
+  makeChart('ch_debt_line', {
+    type: 'line',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'D/E', data:de, borderColor:c('red'), backgroundColor:'transparent', borderWidth:2, tension:0.3, pointRadius:3 },
+        { label:'DFL', data:dfl_, borderColor:c('orange'), backgroundColor:'transparent', borderWidth:2, tension:0.3, pointRadius:3 },
+        { label:'D/E норма (1.5)', data:ms.map(()=>1.5), borderDash:[5,5], borderColor:'rgba(255,255,255,0.25)', borderWidth:1, pointRadius:0 },
+      ]
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: TRAFFIC
+═══════════════════════════════════════════════ */
+function renderTraffic(d) {
+  const p = document.getElementById('panel-traffic');
+  const ms = slice(d.months);
+  const crm = slice(d.crm_pct), ftdN = slice(d.ftd_new), ftdO = slice(d.ftd_old);
+  const fb = slice(d.tr_fb), tg = slice(d.tr_tg);
+
+  const roi_fb = slice(d.rev_core).map((v,i) => fb[i] ? ((v*0.45)/fb[i]*100).toFixed(0) : 0);
+  const roi_tg = slice(d.rev_core).map((v,i) => tg[i] ? ((v*0.15)/tg[i]*100).toFixed(0) : 0);
+
+  p.innerHTML = `
+  <div class="kpi-row">
+    ${kpiCard('CRM-доля', last(crm).toFixed(0)+'%', (last(crm)-prev(crm)).toFixed(1), 'п.п.', last(crm)>80)}
+    ${kpiCard('FTD новые', last(ftdN), deltaPct(last(ftdN),prev(ftdN)), 'к пред.', true)}
+    ${kpiCard('FTD база', last(ftdO), deltaPct(last(ftdO),prev(ftdO)), 'к пред.')}
+    ${kpiCard('Расход FB', fmt(last(fb)), deltaPct(last(fb),prev(fb)), 'к пред.', true)}
+    ${kpiCard('Расход TG', fmt(last(tg)), deltaPct(last(tg),prev(tg)), 'к пред.', true)}
+    ${kpiCard('ROI FB', last(roi_fb)+'%', '', '')}
+    ${kpiCard('ROI TG', last(roi_tg)+'%', '', '')}
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card wide">
+      <div class="chart-title">FTD новые vs база и CRM-зависимость</div>
+      <div class="chart-wrap tall"><canvas id="ch_ftd"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Расходы на трафик FB vs TG</div>
+      <div class="chart-wrap"><canvas id="ch_traffic_cost"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">ROI каналов (%)</div>
+      <div class="chart-wrap"><canvas id="ch_roi"></canvas></div>
+    </div>
+  </div>`;
+
+  makeChart('ch_ftd', {
+    type: 'bar',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'FTD новые', data:ftdN, backgroundColor:c('green',0.65), borderWidth:0, yAxisID:'y' },
+        { label:'FTD база',  data:ftdO, backgroundColor:c('cyan',0.45), borderWidth:0, yAxisID:'y' },
+        { label:'CRM %',     data:crm, type:'line', borderColor:c('red'), backgroundColor:'transparent', borderWidth:2.5, pointRadius:4, yAxisID:'y2', tension:0.3 },
+      ]
+    },
+    options: {
+      scales: {
+        x:{}, y:{stacked:false},
+        y2:{ position:'right', grid:{drawOnChartArea:false}, ticks:{color:'rgba(248,113,113,0.8)',callback:v=>v+'%'}, min:60, max:100 }
+      }
+    }
+  });
+
+  makeChart('ch_traffic_cost', {
+    type: 'bar',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'Facebook', data:fb, backgroundColor:c('purple',0.65), borderWidth:0 },
+        { label:'Telegram', data:tg, backgroundColor:c('cyan',0.65), borderWidth:0 },
+      ]
+    }
+  });
+
+  makeChart('ch_roi', {
+    type: 'line',
+    data: {
+      labels: ms,
+      datasets: [
+        { label:'ROI FB %', data:roi_fb.map(Number), borderColor:c('purple'), backgroundColor:'transparent', borderWidth:2, tension:0.3, pointRadius:4 },
+        { label:'ROI TG %', data:roi_tg.map(Number), borderColor:c('cyan'), backgroundColor:'transparent', borderWidth:2, tension:0.3, pointRadius:4 },
+        { label:'Безубыт. (100%)', data:ms.map(()=>100), borderDash:[5,5], borderColor:'rgba(255,255,255,0.2)', borderWidth:1, pointRadius:0 },
+      ]
+    },
+    options: { scales: { y:{ ticks:{callback:v=>v+'%'} } } }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: КОНСОЛИДАЦИЯ
+═══════════════════════════════════════════════ */
+function renderConsol(d) {
+  const p = document.getElementById('panel-consol');
+  const ms = slice(d.months);
+  const rev = slice(d.revenue);
+  // Demo: split revenue across entities
+  const rocketShare = rev.map(v => Math.round(v * 0.62));
+  const ludens = rev.map(v => Math.round(v * 0.24));
+  const satellite = rev.map(v => Math.round(v * 0.14));
+  const np = slice(d.net_profit);
+
+  p.innerHTML = `
+  <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Консолидированная отчётность по юридическим лицам группы Rocket Project</div>
+  <div class="kpi-row">
+    ${kpiCard('Группа — Выручка', fmt(last(rev)), deltaPct(last(rev),prev(rev)), 'к пред.')}
+    ${kpiCard('Rocket (62%)', fmt(last(rocketShare)), '', '')}
+    ${kpiCard('Ludens (24%)', fmt(last(ludens)), '', '')}
+    ${kpiCard('Satellite (14%)', fmt(last(satellite)), '', '')}
+    ${kpiCard('Группа — ЧП', fmt(last(np)), deltaPct(last(np),prev(np)), 'к пред.', last(np)<0)}
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card wide">
+      <div class="chart-title">Выручка по юрлицам (стэк)</div>
+      <div class="chart-wrap tall"><canvas id="ch_consol_rev"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Доля выручки по юрлицам</div>
+      <div class="chart-wrap"><canvas id="ch_consol_pie"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Чистая прибыль группы</div>
+      <div class="chart-wrap"><canvas id="ch_consol_np"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-top:0">
+    <div class="chart-title">Консолидированный P&L группы</div>
+    <div style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr><th style="min-width:200px">Юрлицо / Статья</th>${ms.map(m=>`<th>${m}</th>`).join('')}</tr></thead>
+      <tbody>
+        <tr class="section-row"><td colspan="${ms.length+1}">Rocket (основной)</td></tr>
+        <tr><td>&nbsp;&nbsp;Выручка</td>${rocketShare.map(v=>`<td class="pos">${fmtFull(v)}</td>`).join('')}</tr>
+        <tr><td>&nbsp;&nbsp;ЧП (est.)</td>${np.map(v=>v*0.62).map(v=>`<td class="${Math.round(v)<0?'neg':'pos'}">${fmtFull(Math.round(v))}</td>`).join('')}</tr>
+        <tr class="section-row"><td colspan="${ms.length+1}">Ludens Group</td></tr>
+        <tr><td>&nbsp;&nbsp;Выручка</td>${ludens.map(v=>`<td class="pos">${fmtFull(v)}</td>`).join('')}</tr>
+        <tr class="section-row"><td colspan="${ms.length+1}">Satellite Projects</td></tr>
+        <tr><td>&nbsp;&nbsp;Выручка</td>${satellite.map(v=>`<td class="pos">${fmtFull(v)}</td>`).join('')}</tr>
+        <tr class="total-row"><td>ИТОГО группа</td>${rev.map(v=>`<td>${fmtFull(v)}</td>`).join('')}</tr>
+      </tbody>
+    </table></div>
+  </div>`;
+
+  makeChart('ch_consol_rev', {
+    type: 'bar',
+    data: { labels: ms, datasets: [
+      { label:'Rocket',   data:rocketShare, backgroundColor:c('cyan',0.65), borderWidth:0 },
+      { label:'Ludens',   data:ludens,      backgroundColor:c('purple',0.65), borderWidth:0 },
+      { label:'Satellite',data:satellite,   backgroundColor:c('green',0.55), borderWidth:0 },
+    ]},
+    options: { scales: { x:{stacked:true}, y:{stacked:true} } }
+  });
+
+  makeChart('ch_consol_pie', {
+    type: 'doughnut',
+    data: { labels:['Rocket','Ludens','Satellite'],
+      datasets:[{ data:[62,24,14], backgroundColor:[c('cyan',0.75),c('purple',0.75),c('green',0.65)], borderWidth:1 }]
+    },
+    options: { plugins:{ legend:{ position:'bottom' } } }
+  });
+
+  makeChart('ch_consol_np', {
+    type: 'bar',
+    data: { labels:ms, datasets:[
+      { label:'ЧП группы', data:np,
+        backgroundColor:np.map(v=>v>=0?c('green',0.65):'rgba(248,113,113,0.65)'), borderWidth:0 }
+    ]}
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: МОДЕЛЬ
+═══════════════════════════════════════════════ */
+function renderModel(d) {
+  const p = document.getElementById('panel-model');
+  const lastRev = last(slice(d.revenue));
+  const lastVC  = last(slice(d.var_costs));
+  const lastInd = last(slice(d.indirect));
+  // Simple forecast: project 6 months ahead
+  const foreMonths = ['Июн 2026','Июл 2026','Авг 2026','Сен 2026','Окт 2026','Дек 2026'];
+  const growth = [0.02, 0.05, 0.07, 0.10, 0.13, 0.18]; // recovery scenario
+  const foreRev = growth.map(g => Math.round(lastRev * (1 + g)));
+  const foreVC  = growth.map(g => Math.round(lastVC  * (1 + g * 0.7)));
+  const foreInd = foreMonths.map(() => Math.round(lastInd * 1.02));
+  const foreInt = foreMonths.map(() => 42000);
+  const foreNP  = foreRev.map((_,i) => foreRev[i] - foreVC[i] - foreInd[i] - foreInt[i]);
+
+  p.innerHTML = `
+  <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Прогнозная модель на 6 месяцев — сценарий восстановления. <span style="color:var(--yellow)">Базируется на демо-данных.</span></div>
+  <div class="kpi-row">
+    ${kpiCard('Прогноз выручки (дек)', fmt(last(foreRev)), deltaPct(last(foreRev),lastRev), 'vs факт май')}
+    ${kpiCard('Прогноз ЧП (дек)', fmt(last(foreNP)), '', '', last(foreNP)<0)}
+    ${kpiCard('Точка безубыт.', fmt(lastInd + 42000), '', '')}
+    ${kpiCard('Рост за 6 мес.', '+' + Math.round(growth[5]*100) + '%', '', '')}
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card wide">
+      <div class="chart-title">Прогноз выручки и ЧП на 6 месяцев</div>
+      <div class="chart-wrap tall"><canvas id="ch_model_main"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Прогноз структуры расходов</div>
+      <div class="chart-wrap"><canvas id="ch_model_costs"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Точка безубыточности vs выручка</div>
+      <div class="chart-wrap"><canvas id="ch_model_bep"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-top:0">
+    <div class="chart-title">Прогнозный P&L</div>
+    <div style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr><th style="min-width:180px">Статья</th>${foreMonths.map(m=>`<th>${m}</th>`).join('')}</tr></thead>
+      <tbody>
+        <tr><td>Выручка (прогноз)</td>${foreRev.map(v=>`<td class="pos">${fmtFull(v)}</td>`).join('')}</tr>
+        <tr><td>Перем. расходы</td>${foreVC.map(v=>`<td class="neg">${fmtFull(-v)}</td>`).join('')}</tr>
+        <tr><td>Постоянные расходы</td>${foreInd.map(v=>`<td class="neg">${fmtFull(-v)}</td>`).join('')}</tr>
+        <tr><td>Проценты</td>${foreInt.map(v=>`<td class="neg">${fmtFull(-v)}</td>`).join('')}</tr>
+        <tr class="total-row"><td>ЧП (прогноз)</td>${foreNP.map(v=>`<td class="${v>=0?'pos':'neg'}">${fmtFull(v)}</td>`).join('')}</tr>
+      </tbody>
+    </table></div>
+  </div>`;
+
+  const allMonths = [...slice(d.months), ...foreMonths];
+  const allRev    = [...slice(d.revenue), ...foreRev];
+  const allNP     = [...slice(d.net_profit), ...foreNP];
+  const splitAt   = slice(d.months).length;
+
+  makeChart('ch_model_main', {
+    type: 'bar',
+    data: { labels: allMonths, datasets: [
+      { label:'Факт выручка',    data: allRev.slice(0, splitAt),    backgroundColor:c('cyan',0.55),  borderWidth:0 },
+      { label:'Прогноз выручка', data: [...allRev.slice(0,splitAt).map(()=>null), ...foreRev], backgroundColor:c('cyan',0.3), borderWidth:1, borderColor:c('cyan',0.6), borderDash:[4,4] },
+      { label:'Факт ЧП',         data: allNP.slice(0, splitAt),     type:'line', borderColor:c('green'), backgroundColor:'transparent', borderWidth:2, pointRadius:3, tension:0.3 },
+      { label:'Прогноз ЧП',      data: [...allNP.slice(0,splitAt).map(()=>null), ...foreNP], type:'line', borderColor:c('yellow'), backgroundColor:'transparent', borderWidth:2, borderDash:[5,5], pointRadius:3, tension:0.3 },
+    ]}
+  });
+
+  makeChart('ch_model_costs', {
+    type: 'bar',
+    data: { labels: foreMonths, datasets: [
+      { label:'Переменные', data:foreVC,  backgroundColor:c('red',0.6), borderWidth:0 },
+      { label:'Постоянные', data:foreInd, backgroundColor:c('purple',0.6), borderWidth:0 },
+      { label:'Проценты',   data:foreInt, backgroundColor:c('orange',0.6), borderWidth:0 },
+    ]},
+    options: { scales:{ x:{stacked:true}, y:{stacked:true} } }
+  });
+
+  const bepLine = foreMonths.map(() => lastInd + 42000);
+  makeChart('ch_model_bep', {
+    type: 'line',
+    data: { labels: foreMonths, datasets: [
+      { label:'Прогноз выручки', data:foreRev, borderColor:c('cyan'), backgroundColor:c('cyan',0.1), fill:true, borderWidth:2, tension:0.3 },
+      { label:'Точка безубыт.', data:bepLine, borderColor:c('red'), backgroundColor:'transparent', borderDash:[6,4], borderWidth:2, pointRadius:0 },
+    ]}
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: ПЛАТЁЖНЫЙ КАЛЕНДАРЬ
+═══════════════════════════════════════════════ */
+function renderCalendar(d) {
+  const p = document.getElementById('panel-calendar');
+  const weeks = ['1–7 июн','8–14 июн','15–21 июн','22–30 июн','1–7 июл','8–14 июл'];
+  const inflow  = [185000, 230000, 195000, 280000, 162000, 215000];
+  const outflow = [165000, 198000, 242000, 195000, 178000, 188000];
+  const netcf   = inflow.map((v,i) => v - outflow[i]);
+  const balance = [580000];
+  netcf.forEach((v,i) => balance.push(balance[i] + v));
+
+  const payments = [
+    { date:'02.06', type:'in',  cat:'Выручка Core',       amt:95000,  status:'ok' },
+    { date:'03.06', type:'out', cat:'ФОТ (основной)',      amt:-88000, status:'ok' },
+    { date:'05.06', type:'out', cat:'Налоги (НДС)',        amt:-24000, status:'ok' },
+    { date:'07.06', type:'in',  cat:'Выручка Influence',   amt:62000,  status:'ok' },
+    { date:'10.06', type:'out', cat:'Реклама FB',          amt:-65000, status:'plan' },
+    { date:'12.06', type:'in',  cat:'Выручка Mannequin',   amt:48000,  status:'plan' },
+    { date:'15.06', type:'out', cat:'Аренда / операц.',   amt:-18000, status:'plan' },
+    { date:'18.06', type:'out', cat:'Погашение кредита',   amt:-75000, status:'plan' },
+    { date:'20.06', type:'in',  cat:'Выручка Streams',    amt:35000,  status:'plan' },
+    { date:'25.06', type:'out', cat:'Проценты по кредиту',-42000,     status:'plan' },
+    { date:'28.06', type:'in',  cat:'Прочие поступления', amt:22000,  status:'plan' },
+    { date:'30.06', type:'out', cat:'ФОТ (бонусы)',       amt:-15000, status:'plan' },
+  ].map(r => ({...r, amt: r.amt ?? 0}));
+
+  p.innerHTML = `
+  <div class="kpi-row">
+    ${kpiCard('Текущий остаток', fmt(balance[0]), '', '')}
+    ${kpiCard('Притоки (план)', fmt(sum(inflow)), '', '')}
+    ${kpiCard('Оттоки (план)', fmt(sum(outflow)), '', '', true)}
+    ${kpiCard('Нетто (план)', fmt(sum(netcf)), '', '', sum(netcf)<0)}
+    ${kpiCard('Прогноз конец июл', fmt(last(balance)), '', '', last(balance)<200000)}
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card wide">
+      <div class="chart-title">Денежные потоки и остаток по неделям</div>
+      <div class="chart-wrap tall"><canvas id="ch_cal_main"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-bottom:16px">
+    <div class="chart-title">Плановые платежи — июнь 2026</div>
+    <div style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr><th>Дата</th><th style="text-align:left">Категория</th><th>Сумма</th><th>Статус</th></tr></thead>
+      <tbody>
+        ${payments.map(r => `<tr>
+          <td style="color:var(--muted)">${r.date}</td>
+          <td style="text-align:left">${r.cat}</td>
+          <td class="${r.amt > 0 ? 'pos' : 'neg'}">${r.amt > 0 ? '+' : ''}${fmtFull(r.amt)}</td>
+          <td><span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${r.status==='ok'?'rgba(52,211,153,0.15)':'rgba(251,191,36,0.12)'};color:${r.status==='ok'?'var(--green)':'var(--yellow)'}">${r.status==='ok'?'Факт':'План'}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+  </div>`;
+
+  makeChart('ch_cal_main', {
+    type: 'bar',
+    data: { labels: weeks, datasets: [
+      { label:'Притоки',    data:inflow,  backgroundColor:c('green',0.6), borderWidth:0 },
+      { label:'Оттоки',     data:outflow.map(v=>-v), backgroundColor:c('red',0.5), borderWidth:0 },
+      { label:'Остаток ДС', data:balance.slice(0,weeks.length), type:'line', borderColor:c('cyan'), backgroundColor:'transparent', borderWidth:2.5, pointRadius:4, yAxisID:'y2', tension:0.3 },
+    ]},
+    options: { scales: {
+      x:{}, y:{},
+      y2:{ position:'right', grid:{drawOnChartArea:false}, ticks:{color:'rgba(34,211,238,0.7)',callback:v=>fmt(v)} }
+    }}
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: TASKS
+═══════════════════════════════════════════════ */
+function renderTasks(d) {
+  const p = document.getElementById('panel-tasks');
+  p.innerHTML = `
+  <div class="kpi-row">
+    ${kpiCard('Выполнено', d.tasks_done.length, '', '')}
+    ${kpiCard('Просрочено', d.tasks_overdue.length, '', '', d.tasks_overdue.length > 0)}
+    ${kpiCard('% выполнения', Math.round(d.tasks_done.length/(d.tasks_done.length+d.tasks_overdue.length)*100)+'%', '', '')}
+  </div>
+
+  <div class="section-h">Выполненные задачи</div>
+  <div class="task-list" style="margin-bottom:24px">
+    ${d.tasks_done.map(t => `
+    <div class="task-item">
+      <div class="task-status status-done">Выполнено</div>
+      <div class="task-text">${t.text}
+        <div class="task-meta">Ответственный: ${t.resp} · ${t.date}</div>
+      </div>
+    </div>`).join('')}
+  </div>
+
+  <div class="section-h">Просроченные задачи</div>
+  <div class="task-list">
+    ${d.tasks_overdue.map(t => `
+    <div class="task-item">
+      <div class="task-status status-overdue">Просрочено</div>
+      <div class="task-text">${t.text}
+        <div class="task-meta">Ответственный: ${t.resp} · срок: ${t.due}</div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: ЦКП (РЕАЛЬНЫЕ ДАННЫЕ)
+═══════════════════════════════════════════════ */
+function renderCKP(d) {
+  const p = document.getElementById('panel-ckp');
+  // Real CKP data from Google Sheet "Дорожная карта_Rocket Project_2026", лист ЦКП
+  // Periods: дек.25, янв.26, фев.26, мар.26, апр.26
+  const ckpPeriods = ['дек.25','янв.26','фев.26','мар.26','апр.26'];
+
+  const ckp1 = {
+    title: 'ЦКП 1 — ДЕНЬГИ',
+    color: 'var(--accent)',
+    rows: [
+      { name:'Положительный денежный поток ($)',    vals:[5808,6455,10566,15204,-34315], norm:'> 0',     alert: v=>v<0 },
+      { name:'Остаток ДС (коридор мин. $50 000)',    vals:[25688,29981,40548,55751,21436], norm:'≥ 50K',  alert: v=>v<50000 },
+      { name:'Кассовых разрывов нет',                vals:['да','да','да','нет','нет'],   norm:'да',      alert: v=>v==='нет' },
+      { name:'Оборачиваемость ДЗ, дней (норма ≤15)', vals:[34,27,21,24,28],               norm:'≤ 15 дн', alert: v=>v>15 },
+      { name:'Получение препеев 25% выручки',        vals:['нет','нет','нет','нет','нет'], norm:'да',     alert: v=>v==='нет' },
+    ]
+  };
+
+  const ckp2 = {
+    title: 'ЦКП 2 — ДИВИДЕНДЫ',
+    color: 'var(--purple)',
+    rows: [
+      { name:'Зарабатывать ЧП ($)',                           vals:[108912,141929,52748,29386,127851], norm:'> 0', alert: v=>v<0 },
+      { name:'  Развитие (SEO+RTP+Handbox+Mannequin)',        vals:[null,-3415,-28961,-43071,-42699],  norm:'> 0', alert: v=>v&&v<0 },
+      { name:'  Резерв (факт)',                               vals:[null,0,0,5000,2000],               norm:'> 0', alert: ()=>false },
+      { name:'  Дивиденды начислено',                        vals:[56083,54456,70964,26374,14693],     norm:'',    alert: ()=>false },
+      { name:'Выплачены ДД ($)',                             vals:[-8906,-113736,-146893,-68154,-46485],norm:'',   alert: ()=>false },
+      { name:'ДД в пределах 50% ЧП прошлого мес.',          vals:[null,'8%','104%','103%','158%'],    norm:'≤50%',alert: v=>v&&parseFloat(v)>50 },
+      { name:'Долг по дивидендам ($)',                        vals:[0,-62695,-138623,-180403,-212195],  norm:'= 0', alert: v=>v<0 },
+    ]
+  };
+
+  const ckp3 = {
+    title: 'ЦКП 3 — БОГАТСТВО',
+    color: 'var(--green)',
+    rows: [
+      { name:'Valuation $10M→$30M',                        vals:[6592235,6592235,9448871,21031000,22531000], norm:'$30M', alert: ()=>false, fmt:'$' },
+      { name:'LTV/CAC ≥ 3:1',                              vals:[null,null,null,null,1.3],                   norm:'≥ 3', alert: v=>v&&v<3 },
+      { name:'Затраты трафик < 40% выручки',               vals:[null,'39%','48%','52%','32%'],              norm:'< 40%', alert: v=>v&&parseFloat(v)>40 },
+      { name:'ФОТ с налогами < 35% выручки',               vals:['34%','32%','33%','32%','37%'],             norm:'< 35%', alert: v=>parseFloat(v)>35 },
+      { name:'ЗП отдела продаж < 15% выручки',             vals:[null,'16.6%','15.4%','15.5%','15.6%'],      norm:'< 15%', alert: v=>v&&parseFloat(v)>15 },
+      { name:'Рост базы (приток FTD), шт.',                 vals:[659,983,1453,1272,916],                     norm:'↑', alert: ()=>false },
+      { name:'Общая база (факт без оттока)',                vals:[34948,35931,37384,38656,39572],             norm:'100K к дек', alert: ()=>false },
+      { name:'Общая база (план)',                           vals:[30000,40369,45790,51211,56632],             norm:'',  alert: ()=>false },
+      { name:'ARPU факт ($)',                               vals:[null,513,609,612,612],                      norm:'$1K', alert: v=>v&&v<500 },
+      { name:'ARPU план ($)',                               vals:[null,513,571,614,657],                      norm:'$1K', alert: ()=>false },
+      { name:'Жизн. срок клиента, мес. (факт)',            vals:[0.84,0.87,0.20,0.23,0.37],                 norm:'2.5', alert: v=>v<1 },
+      { name:'Жизн. срок (план)',                          vals:[null,0.98,1.11,1.25,1.39],                  norm:'2.5', alert: ()=>false },
+      { name:'ROE ≥ 10%',                                  vals:['40%','29%','9%','6%','23%'],               norm:'≥10%', alert: v=>parseFloat(v)<10 },
+    ]
+  };
+
+  function renderCKPBlock(block) {
+    return `
+    <div class="chart-card" style="margin-bottom:16px">
+      <div class="chart-title" style="color:${block.color};font-size:15px">${block.title}</div>
+      <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr>
+          <th style="min-width:280px;text-align:left">Показатель</th>
+          ${ckpPeriods.map(p=>`<th>${p}</th>`).join('')}
+          <th>Норма</th>
+        </tr></thead>
+        <tbody>
+          ${block.rows.map(row => {
+            const lastVal = row.vals.filter(v=>v!==null).slice(-1)[0];
+            const isAlert = row.alert && lastVal !== null && row.alert(lastVal);
+            return `<tr class="${isAlert?'alert-row':''}">
+              <td style="padding-left:${row.name.startsWith('  ')?'24px':'8px'}">${row.name.trim()}</td>
+              ${row.vals.map(v => {
+                if (v === null) return '<td class="muted-val">—</td>';
+                if (typeof v === 'string') {
+                  const isOk = v==='да'||v==='Да';
+                  const isNo = v==='нет'||v==='Нет';
+                  return `<td class="${isOk?'pos':isNo?'neg':'muted-val'}">${v}</td>`;
+                }
+                const cls = row.alert && row.alert(v) ? 'neg' : 'pos';
+                return `<td class="${cls}">${row.fmt==='$' ? '$'+Math.round(v/1000)+'K' : typeof v==='number'&&Math.abs(v)>1000 ? fmtFull(v) : v}</td>`;
+              }).join('')}
+              <td style="color:var(--muted);font-size:11px">${row.norm}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  }
+
+  // Count alerts
+  function countAlerts(block) {
+    return block.rows.filter(r => {
+      const last = r.vals.filter(v=>v!==null).slice(-1)[0];
+      return last !== null && r.alert && r.alert(last);
+    }).length;
+  }
+
+  const alerts1 = countAlerts(ckp1), alerts2 = countAlerts(ckp2), alerts3 = countAlerts(ckp3);
+  const totalAlerts = alerts1 + alerts2 + alerts3;
+
+  // Charts data
+  const cashflow  = [5808, 6455, 10566, 15204, -34315];
+  const baseActual = [34948, 35931, 37384, 38656, 39572];
+  const basePlan   = [30000, 40369, 45790, 51211, 56632];
+  const divDebt    = [0, -62695, -138623, -180403, -212195];
+  const np2        = [108912, 141929, 52748, 29386, 127851];
+
+  p.innerHTML = `
+  <div class="kpi-row">
+    ${kpiCard('ЦКП 1 — Деньги', alerts1 ? `${alerts1} нарушений` : '✓ Норма', '', '', alerts1 > 0)}
+    ${kpiCard('ЦКП 2 — Дивиденды', alerts2 ? `${alerts2} нарушений` : '✓ Норма', '', '', alerts2 > 0)}
+    ${kpiCard('ЦКП 3 — Богатство', alerts3 ? `${alerts3} нарушений` : '✓ Норма', '', '', alerts3 > 0)}
+    ${kpiCard('Всего нарушений', totalAlerts, '', '', totalAlerts > 3)}
+    ${kpiCard('База игроков (факт)', fmtFull(39572), deltaPct(39572,34948), 'vs дек.25')}
+    ${kpiCard('Долг по дивидендам', '$' + fmtFull(212195), '', '', true)}
+  </div>
+
+  <div class="chart-grid" style="margin-bottom:16px">
+    <div class="chart-card">
+      <div class="chart-title">Денежный поток (ЦКП 1)</div>
+      <div class="chart-wrap"><canvas id="ch_ckp_cf"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">База игроков: факт vs план (ЦКП 3)</div>
+      <div class="chart-wrap"><canvas id="ch_ckp_base"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Долг по дивидендам (ЦКП 2)</div>
+      <div class="chart-wrap"><canvas id="ch_ckp_div"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Чистая прибыль (ЦКП 2 — зарабатывать ЧП)</div>
+      <div class="chart-wrap"><canvas id="ch_ckp_np"></canvas></div>
+    </div>
+  </div>
+
+  ${renderCKPBlock(ckp1)}
+  ${renderCKPBlock(ckp2)}
+  ${renderCKPBlock(ckp3)}
+
+  <div class="ai-section">
+  <div class="ai-card" style="margin-top:8px">
+    <div class="ai-card-title">Выводы по ЦКП — апрель 2026</div>
+
+    <div class="finding">
+      <div class="finding-num">ЦКП 1 — ДЕНЬГИ</div>
+      <div class="finding-title">Кассовый разрыв в апреле — критический сигнал</div>
+      <div class="finding-body">Денежный поток в апреле ушёл в минус: −$34 315 (норма > 0). Остаток ДС упал до $21 436 — ниже коридора $50 000. Оборачиваемость ДЗ составляет 24–28 дней при норме ≤ 15 дней. Препеи не поступают ни в одном из периодов.</div>
+      <div class="finding-basis">Нарушены: ЦКП1 «Положительный поток» (апр: −34K), «Остаток ≥ 50K» (апр: 21K), «ДЗ ≤ 15 дн» (все периоды), «Препеи 25%» (все периоды).</div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-num">ЦКП 2 — ДИВИДЕНДЫ</div>
+      <div class="finding-title">Долг по дивидендам растёт — систематическое превышение 50% ЧП</div>
+      <div class="finding-body">ЧП за апрель: $127 851 (+334% vs март). Однако дивиденды систематически превышают 50% ЧП прошлого месяца (104%, 103%, 158%). Накопленный долг по дивидендам вырос с $0 до −$212 195. Затраты на развитие отрицательны во всех периодах — реинвестиций нет.</div>
+      <div class="finding-basis">Нарушены: «ДД ≤ 50% ЧП» (фев–апр), «Развитие > 0» (янв–апр), «Долг = 0» (янв–апр).</div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-num">ЦКП 3 — БОГАТСТВО</div>
+      <div class="finding-title">Valuation растёт, но операционные метрики под давлением</div>
+      <div class="finding-body">Оценка компании выросла с $6.6M до $22.5M (+241% YTD) — позитивный сигнал. База игроков: 39 572 факт vs 56 632 план — отставание 30%. LTV/CAC = 1.3 при норме ≥ 3.0 (в 2.3× ниже нормы). Затраты на трафик превысили 40% выручки в фев–мар. ROE: снизилось с 40% до 23% при норме ≥ 10%.</div>
+      <div class="finding-basis">Нарушены: «LTV/CAC ≥ 3» (апр: 1.3), «Трафик < 40%» (фев: 48%, мар: 52%), «База по плану» (отставание 30%), «Жизн. срок» (0.37 мес. при цели 2.5).</div>
+    </div>
+
+    <div class="finding" style="border-bottom:none;margin-bottom:0;padding-bottom:0">
+      <div class="finding-num">Управленческий вывод</div>
+      <div class="finding-title">3 приоритета на ближайший месяц</div>
+      <div class="finding-body">1. <strong>Ликвидность</strong>: восстановить остаток ДС выше $50K — ускорить сбор ДЗ (лимит 15 дней), ввести контроль препеев. 2. <strong>Дивиденды</strong>: мораторий на выплаты сверх 50% ЧП — закрыть долг $212K из прибыли апреля. 3. <strong>База игроков</strong>: форсировать FTD-трафик для сокращения отставания от плана с 30% до 15% к Q3.</div>
+    </div>
+  </div>
+  </div>`;
+
+  makeChart('ch_ckp_cf', {
+    type: 'bar',
+    data: { labels: ckpPeriods, datasets: [{
+      label:'Денежный поток', data:cashflow,
+      backgroundColor: cashflow.map(v=>v>=0?c('green',0.65):'rgba(248,113,113,0.65)'), borderWidth:0
+    }, {
+      label:'Норма (0)', data: ckpPeriods.map(()=>0),
+      type:'line', borderColor:'rgba(255,255,255,0.2)', borderDash:[4,4], borderWidth:1, pointRadius:0
+    }]}
+  });
+
+  makeChart('ch_ckp_base', {
+    type: 'line',
+    data: { labels: ckpPeriods, datasets: [
+      { label:'Факт', data:baseActual, borderColor:c('cyan'), backgroundColor:c('cyan',0.1), fill:true, borderWidth:2.5, pointRadius:4, tension:0.3 },
+      { label:'План', data:basePlan,  borderColor:c('yellow'), backgroundColor:'transparent', borderDash:[5,5], borderWidth:2, pointRadius:3, tension:0.3 },
+    ]}
+  });
+
+  makeChart('ch_ckp_div', {
+    type: 'bar',
+    data: { labels: ckpPeriods, datasets: [{
+      label:'Долг по дивидендам', data:divDebt,
+      backgroundColor: c('red',0.6), borderWidth:0
+    }]}
+  });
+
+  makeChart('ch_ckp_np', {
+    type: 'bar',
+    data: { labels: ckpPeriods, datasets: [{
+      label:'Чистая прибыль ($)', data:np2,
+      backgroundColor: np2.map(v=>v>=0?c('purple',0.65):'rgba(248,113,113,0.65)'), borderWidth:0
+    }]}
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: RESULTS
+═══════════════════════════════════════════════ */
+function renderResults(d) {
+  const p = document.getElementById('panel-results');
+  p.innerHTML = `
+  <div class="section-h">Внедрённость инструментов</div>
+  <div class="tools-grid" id="toolsGrid"></div>
+
+  <div class="section-h" style="margin-top:24px">Задачи и просрочки (текущий месяц)</div>
+  <div class="kpi-row">
+    ${kpiCard('Выполнено', d.tasks_done.length, '', '')}
+    ${kpiCard('Просрочено', d.tasks_overdue.length, '', '', d.tasks_overdue.length>0)}
+    ${kpiCard('% выполнения', Math.round(d.tasks_done.length/(d.tasks_done.length+d.tasks_overdue.length)*100)+'%', '', '')}
+  </div>`;
+
+  // Tools grid
+  const grid = document.getElementById('toolsGrid');
+  if (!grid) return;
+
+  // Try to load from Apps Script if available
+  if (!CONFIG.DEMO && CONFIG.APPS_SCRIPT_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+    grid.innerHTML = '<div style="color:var(--muted);font-size:13px">Загрузка…</div>';
+    fetch('https://script.google.com/macros/s/AKfycbwxYcEODuv8V9XIuXpyJ6giQOE8pXpHZITkznxqzTSuLef4HYlY1eHdwaBOvAvO8Sbh/exec')
+      .then(r => r.json())
+      .then(json => renderToolsGrid(grid, json.tools || d.tools))
+      .catch(() => renderToolsGrid(grid, d.tools));
+  } else {
+    renderToolsGrid(grid, d.tools);
+  }
+}
+
+function renderToolsGrid(grid, tools) {
+  grid.innerHTML = tools.map(t => `
+  <div class="tool-card">
+    <div class="tool-name">${t.name}</div>
+    <div class="tool-bar"><div class="tool-fill" style="width:${t.pct}%;background:${t.color}"></div></div>
+    <div class="tool-pct">${t.pct}% внедрено</div>
+  </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: AI ANALYSIS
+═══════════════════════════════════════════════ */
+function renderAITab(d) {
+  d = d || state.data;
+  const p = document.getElementById('panel-ai');
+
+  // If live AI data present, render it; otherwise show demo
+  if (d.ai_analysis) {
+    p.innerHTML = `<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Обновлено: ${d.ai_date}</div>` + d.ai_analysis;
+    return;
+  }
+
+  // Demo AI analysis based on data
+  const ms = slice(d.months);
+  const npLast = last(slice(d.np_margin_pct));
+  const crmLast = last(slice(d.crm_pct));
+  const ftdN = slice(d.ftd_new);
+  const ftdTrend = deltaPct(last(ftdN), ftdN[0]);
+  const cashDays = Math.round(last(slice(d.cash)) / ((last(slice(d.var_costs)) + last(slice(d.indirect))) / 30));
+
+  p.innerHTML = `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font-size:18px;font-weight:700">AI-Аналитика</div>
+      <div style="font-size:12px;color:var(--muted)">Обновлено: ${d.ai_date} · 4-уровневая цепочка Факт→Причина→Прогноз→Решение</div>
+    </div>
+    <button class="btn btn-secondary" onclick="refreshAI()">✦ Обновить через Make.com</button>
+  </div>
+
+  <!-- FINDINGS -->
+  <div class="ai-section">
+  <div class="ai-card">
+    <div class="ai-card-title">Ключевые наблюдения</div>
+
+    <div class="finding">
+      <div class="finding-num">Наблюдение 1</div>
+      <div class="finding-title">Выручка снижается при растущей зависимости от CRM-базы</div>
+      <div class="finding-body">За период ${ms[0]}–${last(ms)} выручка снизилась с ${fmtFull(slice(d.revenue)[0])} до ${fmtFull(last(slice(d.revenue)))} (−${Math.abs(deltaPct(last(slice(d.revenue)),slice(d.revenue)[0]))}%). Одновременно доля CRM выросла с ${slice(d.crm_pct)[0]}% до ${crmLast}%. FTD новые сократились на ${Math.abs(ftdTrend).toFixed(1)}% за период.</div>
+      <div class="finding-basis">Основание: Threshold Rule #6 (CRM > 80% = HIGH) · Тренд 5 месяцев, расчёт AI</div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-num">Наблюдение 2</div>
+      <div class="finding-title">Маржинальность под давлением — операционная маржа падает</div>
+      <div class="finding-body">Операционная маржа снизилась с ${slice(d.op_margin_pct)[0].toFixed(1)}% до ${last(slice(d.op_margin_pct)).toFixed(1)}%. Постоянные расходы выросли с ${fmt(slice(d.indirect)[0])} до ${fmt(last(slice(d.indirect)))} при падении выручки — операционный рычаг работает против.</div>
+      <div class="finding-basis">Основание: Threshold Rule #7 (операц. маржа < 10% = MED) · Норма операц. маржи для B2C ≥ 15%</div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-num">Наблюдение 3</div>
+      <div class="finding-title">Чистая прибыль ушла в минус в последних периодах</div>
+      <div class="finding-body">Чистая прибыль: ${last(slice(d.net_profit)) < 0 ? `убыток ${fmt(Math.abs(last(slice(d.net_profit))))}` : fmt(last(slice(d.net_profit)))}. Маржа ЧП: ${npLast.toFixed(1)}%. При текущей динамике расходов и выручки убыток накапливается.</div>
+      <div class="finding-basis">Основание: Threshold Rule #1 (маржа ЧП < 5% = HIGH) · МСФО: убыток требует раскрытия причин</div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-num">Наблюдение 4</div>
+      <div class="finding-title">Кэш-позиция устойчива, но тренд на снижение</div>
+      <div class="finding-body">Остаток ДС: ${fmt(last(slice(d.cash)))} = ${cashDays} дней расходов. NCF операционный в последних периодах отрицательный. Дивиденды в I кв. составили ${fmt(slice(d.dividends).filter(v=>v>0).reduce((a,b)=>a+b,0))}, что создавало дополнительную нагрузку.</div>
+      <div class="finding-basis">Основание: Threshold Rule #3 (кэш < 15 дн. = ALERT) · Threshold Rule #9 (дивиденды > 30% NCF = MED)</div>
+    </div>
+  </div>
+  </div>
+
+  <!-- RISKS -->
+  <div class="ai-section">
+  <div class="ai-card">
+    <div class="ai-card-title">Зоны риска</div>
+
+    <div class="risk-item">
+      <div class="risk-header">
+        <div class="risk-tag risk-HIGH">ВЫСОКИЙ</div>
+        <div class="risk-title">Истощение CRM-базы и падение выручки</div>
+      </div>
+      <div class="risk-body">CRM-зависимость ${crmLast}% при норме ≤ 60% (Threshold Rule #6). FTD новых падают ${Math.abs(ftdTrend).toFixed(0)}% за период. При сохранении тренда: через 3–4 мес выручка упадёт ещё на 15–25%, база иссякнет раньше прогноза.</div>
+      <div class="finding-basis">Основание: Rule #6 · прогноз на основе линейного тренда FTD за 5 мес.</div>
+    </div>
+
+    <div class="risk-item">
+      <div class="risk-header">
+        <div class="risk-tag risk-HIGH">ВЫСОКИЙ</div>
+        <div class="risk-title">Отрицательный финансовый рычаг (DFL > 2)</div>
+      </div>
+      <div class="risk-body">DFL = ${last(slice(d.dfl)).toFixed(2)} — порог 2.0 пробит (Rule #10). Стоимость долга превышает ROA, заёмный капитал разрушает стоимость. Рефинансирование откладывается: ежемесячные потери на процентах ${fmt(last(slice(d.interest)))}.</div>
+      <div class="finding-basis">Основание: Threshold Rule #10 (DFL > 2.0 = HIGH) · норма D/E ≤ 1.5 (Rule #4)</div>
+    </div>
+
+    <div class="risk-item">
+      <div class="risk-header">
+        <div class="risk-tag risk-MED">СРЕДНИЙ</div>
+        <div class="risk-title">Рост постоянных расходов при падении выручки</div>
+      </div>
+      <div class="risk-body">Постоянные расходы выросли с ${fmt(slice(d.indirect)[0])} до ${fmt(last(slice(d.indirect)))} (+${deltaPct(last(slice(d.indirect)),slice(d.indirect)[0])}%). Точка безубыточности сместилась вверх. Без роста выручки убыток будет нарастать.</div>
+      <div class="finding-basis">Основание: расчёт AI · операц. рычаг = выручка/EBIT</div>
+    </div>
+  </div>
+  </div>
+
+  <!-- CHAINS (4-level) -->
+  <div class="ai-section">
+  <div class="ai-card">
+    <div class="ai-card-title">4-уровневая цепочка анализа</div>
+
+    <div class="chain-item">
+      <div class="chain-topic">🎯 Тема 1: CRM-зависимость и трафик</div>
+      <div class="chain-steps">
+        <div class="chain-step chain-fact">
+          <div class="chain-icon">📊</div>
+          <div class="chain-text"><strong>Факт</strong>CRM-база формирует ${crmLast}% выручки. FTD новых за 5 мес: ${ftdN.join(' → ')}. Расходы на трафик FB+TG: ${fmt(last(slice(d.tr_fb))+last(slice(d.tr_tg)))} в месяц.</div>
+        </div>
+        <div class="chain-step chain-cause">
+          <div class="chain-icon">🔍</div>
+          <div class="chain-text"><strong>Причина</strong>Новый трафик неэффективен: CAC растёт, ROI FB ниже 100%. Mannequin ещё не даёт существенного объёма. Зависимость от базы структурная.</div>
+        </div>
+        <div class="chain-step chain-fcst">
+          <div class="chain-icon">🔮</div>
+          <div class="chain-text"><strong>Прогноз</strong>При тренде −${Math.abs((deltaPct(last(ftdN), ftdN[0])/ftdN.length)).toFixed(0)}% FTD в мес через 4 мес новых FTD < 400. CRM-выручка начнёт сокращаться активнее. Выручка может упасть ниже точки безубыточности.</div>
+        </div>
+        <div class="chain-step chain-action">
+          <div class="chain-icon">🎯</div>
+          <div class="chain-text"><strong>Решение</strong>Масштабировать Mannequin до $100K/мес (текущий прогресс 84% ЦКП). Перераспределить бюджет трафика в пользу каналов с ROI > 100%. Результат: снижение CRM-доли до 70% к Q4 2026.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chain-item">
+      <div class="chain-topic">🎯 Тема 2: Долговая нагрузка и рефинансирование</div>
+      <div class="chain-steps">
+        <div class="chain-step chain-fact">
+          <div class="chain-icon">📊</div>
+          <div class="chain-text"><strong>Факт</strong>D/E = ${last(slice(d.de_ratio)).toFixed(2)}, DFL = ${last(slice(d.dfl)).toFixed(2)}. Обязательства: ${fmt(last(slice(d.liabilities)))}. Ежемес. проценты: ${fmt(last(slice(d.interest)))}.</div>
+        </div>
+        <div class="chain-step chain-cause">
+          <div class="chain-icon">🔍</div>
+          <div class="chain-text"><strong>Причина</strong>Ставка по долгу выше ROA. DFL > 2: каждый % роста выручки даёт > 2% прироста ЧП, но при падении — удар двойной. Рефинансирование откладывается.</div>
+        </div>
+        <div class="chain-step chain-fcst">
+          <div class="chain-icon">🔮</div>
+          <div class="chain-text"><strong>Прогноз</strong>При текущей ставке годовые выплаты процентов: ${fmt(last(slice(d.interest))*12)}. Без рефинансирования долговая нагрузка поглощает операционную прибыль в убыточные месяцы.</div>
+        </div>
+        <div class="chain-step chain-action">
+          <div class="chain-icon">🎯</div>
+          <div class="chain-text"><strong>Решение</strong>Начать переговоры с банком о рефинансировании по ставке ≤ 18% (ЦКП 30%). Мораторий на дивиденды до достижения NCF опер. > ${fmt(last(slice(d.interest))*2)} в месяц. Результат: экономия ${fmt(last(slice(d.interest))*0.25)}/мес.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- RECOMMENDATIONS -->
+  <div class="ai-section">
+  <div class="ai-card">
+    <div class="ai-card-title">Управленческие рекомендации</div>
+
+    <div class="rec-item rec-URGENT">
+      <div class="rec-stripe"></div>
+      <div class="rec-body">
+        <div class="rec-label">Срочно · эта неделя</div>
+        <div class="rec-title">Мораторий на дивиденды и ревизия трафик-бюджета</div>
+        <div class="rec-text">Приостановить дивиденды до восстановления NCF > 0. Ограничить бюджет FB каналов с ROI < 80% — экономия ${fmt(last(slice(d.tr_fb))*0.2)}/мес.</div>
+        <div class="rec-basis">Основание: Rule #9 (дивиденды > 30% NCF) · Rule #3 (кэш-буфер)</div>
+      </div>
+    </div>
+
+    <div class="rec-item rec-IMPORTANT">
+      <div class="rec-stripe"></div>
+      <div class="rec-body">
+        <div class="rec-label">Важно · 1–2 месяца</div>
+        <div class="rec-title">Масштабировать Mannequin и диверсифицировать выручку</div>
+        <div class="rec-text">Увеличить ресурс команды на Mannequin: план $100K/мес к Q3. Параллельно тестировать новые каналы выручки (подписки, b2b).</div>
+        <div class="rec-basis">Основание: ЦКП «Запуск Mannequin до $100K/мес» (84%) · Rule #6 (CRM > 80%)</div>
+      </div>
+    </div>
+
+    <div class="rec-item rec-IMPORTANT">
+      <div class="rec-stripe"></div>
+      <div class="rec-body">
+        <div class="rec-label">Важно · 1–2 месяца</div>
+        <div class="rec-title">Начать рефинансирование кредита</div>
+        <div class="rec-text">Запросить предложения от 3+ банков. Целевая ставка ≤ 18%. Подготовить финансовую отчётность за 6 мес.</div>
+        <div class="rec-basis">Основание: ЦКП «Рефинансирование» (30%) · Rule #10 (DFL > 2)</div>
+      </div>
+    </div>
+
+    <div class="rec-item rec-STRATEGIC">
+      <div class="rec-stripe"></div>
+      <div class="rec-body">
+        <div class="rec-label">Стратегически · 3–12 месяцев</div>
+        <div class="rec-title">Регистрация в ПВТ и формирование кэш-буфера</div>
+        <div class="rec-text">ПВТ: снижение налоговой нагрузки. Кэш-буфер: цель 3 мес. расходов = ${fmt((last(slice(d.var_costs))+last(slice(d.indirect)))*3)}. Прогресс по ЦКП: 15%.</div>
+        <div class="rec-basis">Основание: ЦКП «Регистрация ПВТ» (45%) · ЦКП «Кэш-буфер 3 мес.» (15%)</div>
+      </div>
+    </div>
+  </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════
+   EXPORT
+═══════════════════════════════════════════════ */
+function toggleExportMenu() {
+  document.getElementById('exportMenu').classList.toggle('open');
+}
+
+function exportExcel() {
+  document.getElementById('exportMenu').classList.remove('open');
+  const d = state.data;
+  const ms = slice(d.months);
+  const wb = XLSX.utils.book_new();
+
+  // P&L Sheet
+  const pnlData = [
+    ['Статья', ...ms, 'Итого'],
+    ['Выручка', ...slice(d.revenue), sum(slice(d.revenue))],
+    ['Переменные расходы', ...slice(d.var_costs).map(v=>-v), -sum(slice(d.var_costs))],
+    ['Валовая прибыль', ...slice(d.revenue).map((v,i)=>v-slice(d.var_costs)[i]), sum(slice(d.revenue))-sum(slice(d.var_costs))],
+    ['Постоянные расходы', ...slice(d.indirect).map(v=>-v), -sum(slice(d.indirect))],
+    ['EBIT', ...slice(d.op_profit), sum(slice(d.op_profit))],
+    ['Проценты', ...slice(d.interest).map(v=>-v), -sum(slice(d.interest))],
+    ['Чистая прибыль', ...slice(d.net_profit), sum(slice(d.net_profit))],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pnlData), 'ОПиУ');
+
+  // Cash Flow
+  const cfData = [
+    ['Статья', ...ms],
+    ['NCF операционный', ...slice(d.ncf_op)],
+    ['NCF инвестиционный', ...slice(d.ncf_inv)],
+    ['NCF финансовый', ...slice(d.ncf_fin)],
+    ['Дивиденды', ...slice(d.dividends).map(v=>-v)],
+    ['Остаток ДС', ...slice(d.cash)],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cfData), 'ДДС');
+
+  // Balance
+  const balData = [
+    ['Показатель', ...ms],
+    ['Активы всего', ...slice(d.assets_total)],
+    ['Капитал', ...slice(d.equity)],
+    ['Обязательства', ...slice(d.liabilities)],
+    ['Текущая ликвидность', ...slice(d.current_ratio)],
+    ['Коэф. автономии', ...slice(d.autonomy)],
+    ['D/E', ...slice(d.de_ratio)],
+    ['DFL', ...slice(d.dfl)],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(balData), 'Баланс');
+
+  // Traffic
+  const trData = [
+    ['Показатель', ...ms],
+    ['CRM %', ...slice(d.crm_pct)],
+    ['FTD новые', ...slice(d.ftd_new)],
+    ['FTD база', ...slice(d.ftd_old)],
+    ['Расходы FB', ...slice(d.tr_fb)],
+    ['Расходы TG', ...slice(d.tr_tg)],
+    ['Rev Core', ...slice(d.rev_core)],
+    ['Rev Influence', ...slice(d.rev_influence)],
+    ['Rev Streams', ...slice(d.rev_streams)],
+    ['Rev Mannequin', ...slice(d.rev_mannequin)],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trData), 'Трафик');
+
+  const filename = `ROCKET_Dashboard_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  document.getElementById('exportMenu').classList.remove('open');
+}
+
+async function exportPDF() {
+  document.getElementById('exportMenu').classList.remove('open');
+  showLoader('Формирование PDF…');
+  try {
+    const { jsPDF } = window.jspdf;
+    const canvas = await html2canvas(document.getElementById('mainContent'), {
+      backgroundColor: '#050f05', scale: 1.5, useCORS: true, logging: false
+    });
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = (canvas.height * pdfW) / canvas.width;
+    let y = 0, pageH = pdf.internal.pageSize.getHeight();
+    while (y < pdfH) {
+      if (y > 0) pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, -y, pdfW, pdfH);
+      y += pageH;
+    }
+    pdf.save(`ROCKET_Dashboard_${new Date().toISOString().slice(0,10)}.pdf`);
+  } catch(e) { alert('Ошибка PDF: ' + e.message); }
+  hideLoader();
+}
+
+/* ═══════════════════════════════════════════════
+   LOADER
+═══════════════════════════════════════════════ */
+function showLoader(text = 'Загрузка…') {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoader() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════
+   BOOT (allow direct open for dev/demo bypass)
+═══════════════════════════════════════════════ */
+// Uncomment next line to disable password during development:
+// document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; initApp();
 </script>
 </body>
 </html>
