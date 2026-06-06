@@ -442,26 +442,64 @@ nav.tabs::-webkit-scrollbar { display: none; }
 .task-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
 
 /* ── NOTES ── */
-.note-btn {
-  position: absolute; top: 12px; right: 12px;
-  background: rgba(255,255,255,0.08); border: 1px solid var(--border);
-  border-radius: 6px; color: var(--muted); font-size: 11px;
-  padding: 4px 8px; cursor: pointer; z-index: 5;
-  transition: all .2s; white-space: nowrap;
+/* ── GOOGLE-SHEETS STYLE NOTES ── */
+/* Empty-state click zone (no note yet) */
+.note-add-zone {
+  position: absolute; top: 0; right: 0;
+  width: 32px; height: 32px; z-index: 8; cursor: pointer;
+  opacity: 0; transition: opacity .2s;
 }
-.note-btn:hover { color: var(--text); border-color: var(--accent); }
-.note-btn.has-note { color: var(--yellow); border-color: rgba(251,191,36,0.4); }
+.chart-card:hover .note-add-zone { opacity: 1; }
+.note-add-zone::before {
+  content: '📝'; position: absolute;
+  top: 6px; right: 6px; font-size: 14px;
+  opacity: 0.4;
+}
+.note-add-zone:hover::before { opacity: 1; }
 
-.note-display {
-  margin-top: 8px; padding: 8px 12px;
-  background: rgba(251,191,36,0.08);
-  border-left: 3px solid var(--yellow);
-  border-radius: 0 6px 6px 0;
-  font-size: 12px; color: var(--text); line-height: 1.5;
-  display: none;
+/* Triangle indicator when note exists */
+.note-indicator {
+  position: absolute; top: 0; right: 0;
+  width: 0; height: 0; z-index: 8; cursor: pointer;
+  border-style: solid;
+  border-width: 0 16px 16px 0;
+  border-color: transparent var(--yellow) transparent transparent;
+  filter: drop-shadow(0 0 3px rgba(251,191,36,0.6));
 }
-.note-display.visible { display: block; }
-.note-display .note-meta { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+
+/* Hover tooltip */
+.note-tooltip {
+  position: absolute; z-index: 200;
+  top: 2px; right: 20px;
+  background: rgba(18, 28, 12, 0.97);
+  border: 1px solid rgba(251,191,36,0.5);
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 160px; max-width: 280px;
+  font-size: 12px; line-height: 1.6;
+  color: var(--text);
+  box-shadow: -4px 4px 20px rgba(0,0,0,0.6);
+  pointer-events: none;
+  opacity: 0; transform: translateX(6px);
+  transition: opacity .18s, transform .18s;
+  white-space: pre-wrap; word-break: break-word;
+}
+/* Arrow pointing right toward the triangle */
+.note-tooltip::after {
+  content: '';
+  position: absolute; top: 4px; right: -7px;
+  border: 7px solid transparent;
+  border-left-color: rgba(251,191,36,0.5);
+}
+.note-indicator:hover ~ .note-tooltip,
+.note-tooltip.pinned {
+  opacity: 1; transform: translateX(0); pointer-events: auto;
+}
+.note-tooltip-meta {
+  font-size: 10px; color: var(--muted);
+  margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 4px;
+}
 
 /* Note modal */
 #noteModal {
@@ -881,22 +919,32 @@ async function loadData() {
   }
   showLoader('Загрузка данных из Google Sheets…');
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000); // 30-second timeout
-    const res = await fetch(CONFIG.APPS_SCRIPT_URL + '?action=getData', {signal: controller.signal});
-    clearTimeout(timer);
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL + '?action=getData');
     const json = await res.json();
-    // Merge: real data overrides DEMO, but keep DEMO keys as fallback
+    // Merge: real data overrides DEMO fallback
     state.data = { ...DEMO, ...json };
-    // Ensure months comes from real data if available
     if (json.months && json.months.length > 0) state.data.months = json.months;
+
+    // Diagnostic: warn if some reports failed
+    const errs = json.report_errors || [];
+    if (errs.length > 0) {
+      const banner = document.getElementById('diagBanner') || (() => {
+        const b = document.createElement('div');
+        b.id = 'diagBanner';
+        b.style.cssText = 'position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:8px 18px;font-size:12px;color:#f87171;z-index:900;max-width:90vw;text-align:center';
+        document.body.appendChild(b);
+        return b;
+      })();
+      banner.textContent = '⚠ Не загружены отчёты: ' + errs.join(', ') + ' — показаны частичные данные';
+      setTimeout(() => banner.remove(), 12000);
+    }
+
     document.getElementById('statusText').textContent = 'Обновлено · ' + new Date().toLocaleTimeString('ru');
     document.getElementById('demoBadge').style.display = 'none';
     renderCurrentTab();
   } catch(e) {
     state.data = DEMO;
-    const msg = e.name === 'AbortError' ? 'Таймаут (30с) — демо-данные' : 'Ошибка загрузки — демо-данные';
-    document.getElementById('statusText').textContent = msg;
+    document.getElementById('statusText').textContent = 'Ошибка загрузки — демо-данные';
     document.getElementById('demoBadge').style.display = 'block';
     renderCurrentTab();
   }
@@ -960,8 +1008,9 @@ function renderCurrentTab() {
 ═══════════════════════════════════════════════ */
 let _noteTarget = null; // { chartId, cardEl }
 
+// Note key is per-chart only (not period-specific) — persists across all periods
 function noteKey(chartId) {
-  return `note:${chartId}:${state.fromIdx}-${state.toIdx}`;
+  return `note:${chartId}`;
 }
 
 function attachNote(canvasId, chartTitle) {
@@ -970,31 +1019,40 @@ function attachNote(canvasId, chartTitle) {
   const card = canvas.closest('.chart-card');
   if (!card) return;
 
-  // Ensure position relative
   card.style.position = 'relative';
 
-  // Remove existing btn if any
-  card.querySelector('.note-btn')?.remove();
-  card.querySelector('.note-display')?.remove();
+  // Remove any previous note elements
+  card.querySelectorAll('.note-indicator,.note-tooltip,.note-add-zone').forEach(el => el.remove());
 
-  // Button
-  const btn = document.createElement('button');
-  btn.className = 'note-btn';
-  btn.title = 'Добавить заметку';
   const key = noteKey(canvasId);
   const existing = state.notes[key];
-  btn.textContent = existing ? '📝 Заметка ✓' : '📝 Заметка';
-  if (existing) btn.classList.add('has-note');
-  btn.onclick = () => openNoteModal(canvasId, chartTitle || canvasId, card);
-  card.appendChild(btn);
 
-  // Note display
   if (existing) {
-    const nd = document.createElement('div');
-    nd.className = 'note-display visible';
-    nd.id = 'note-display-' + canvasId;
-    nd.innerHTML = `<div class="note-meta">📝 ${existing.date}</div>${existing.text}`;
-    card.appendChild(nd);
+    // Triangle indicator
+    const tri = document.createElement('div');
+    tri.className = 'note-indicator';
+    tri.title = 'Нажмите чтобы редактировать заметку';
+    tri.onclick = () => openNoteModal(canvasId, chartTitle || canvasId, card);
+
+    // Floating tooltip shown on hover
+    const tip = document.createElement('div');
+    tip.className = 'note-tooltip';
+    tip.innerHTML = `<div class="note-tooltip-meta">📝 ${existing.date}</div>${existing.text.replace(/</g,'&lt;')}`;
+
+    // Keep tooltip visible while hovering it
+    tip.addEventListener('mouseenter', () => tip.classList.add('pinned'));
+    tip.addEventListener('mouseleave', () => tip.classList.remove('pinned'));
+    tip.onclick = () => openNoteModal(canvasId, chartTitle || canvasId, card);
+
+    card.appendChild(tri);
+    card.appendChild(tip);
+  } else {
+    // Ghost zone — appears on card hover so user can add a note
+    const zone = document.createElement('div');
+    zone.className = 'note-add-zone';
+    zone.title = 'Добавить заметку';
+    zone.onclick = () => openNoteModal(canvasId, chartTitle || canvasId, card);
+    card.appendChild(zone);
   }
 }
 
