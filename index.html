@@ -845,7 +845,8 @@ function switchTab(id) {
 function buildPeriodSelectors() {
   const from = document.getElementById('periodFrom');
   const to   = document.getElementById('periodTo');
-  DEMO.months.forEach((m, i) => {
+  const _months = (state.data && state.data.months && state.data.months.length) ? state.data.months : DEMO.months;
+  _months.forEach((m, i) => {
     from.add(new Option(m, i));
     to.add(new Option(m, i));
   });
@@ -880,15 +881,23 @@ async function loadData() {
   }
   showLoader('Загрузка данных из Google Sheets…');
   try {
-    const res = await fetch(CONFIG.APPS_SCRIPT_URL + '?action=getData');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000); // 30-second timeout
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL + '?action=getData', {signal: controller.signal});
+    clearTimeout(timer);
     const json = await res.json();
+    // Merge: real data overrides DEMO, but keep DEMO keys as fallback
     state.data = { ...DEMO, ...json };
+    // Ensure months comes from real data if available
+    if (json.months && json.months.length > 0) state.data.months = json.months;
     document.getElementById('statusText').textContent = 'Обновлено · ' + new Date().toLocaleTimeString('ru');
     document.getElementById('demoBadge').style.display = 'none';
     renderCurrentTab();
   } catch(e) {
     state.data = DEMO;
-    document.getElementById('statusText').textContent = 'Ошибка — показаны демо-данные';
+    const msg = e.name === 'AbortError' ? 'Таймаут (30с) — демо-данные' : 'Ошибка загрузки — демо-данные';
+    document.getElementById('statusText').textContent = msg;
+    document.getElementById('demoBadge').style.display = 'block';
     renderCurrentTab();
   }
   hideLoader();
@@ -995,7 +1004,7 @@ function openNoteModal(chartId, title, cardEl) {
   const existing = state.notes[key];
   document.getElementById('noteModalTitle').textContent = '📝 ' + title;
   document.getElementById('noteModalPeriod').textContent =
-    'Период: ' + (DEMO.months[state.fromIdx] || '') + ' — ' + (DEMO.months[state.toIdx] || '');
+    'Период: ' + ((state.data.months||DEMO.months)[state.fromIdx] || '') + ' — ' + ((state.data.months||DEMO.months)[state.toIdx] || '');
   document.getElementById('noteTextarea').value = existing ? existing.text : '';
   document.getElementById('noteModal').classList.add('open');
   setTimeout(() => document.getElementById('noteTextarea').focus(), 100);
