@@ -13,9 +13,10 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color('#000000');
 scene.fog=new THREE.FogExp2('#000000',.045);
 
-const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,100);
-camera.position.set(0,3.2,24);
-camera.lookAt(0,0.8,0);
+// ── Camera close to the grass — fills the frame ──
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,100);
+camera.position.set(0,1.8,11);
+camera.lookAt(0,0.5,0);
 
 const renderer=new THREE.WebGPURenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
@@ -36,6 +37,7 @@ const midColor=uniform(new THREE.Color().setRGB(.026,.076,.004));
 const groundColor=uniform(new THREE.Color('#000'));
 const backgroundColor=uniform(new THREE.Color('#000'));
 
+// ── Mouse repulsion uniforms ──
 const mouseWorldX=uniform(0),mouseWorldZ=uniform(0),mouseActive=uniform(0);
 
 const noise2D=Fn(([x,z])=>mx_noise_float(vec3(x,float(0),z)).mul(.5).add(.5));
@@ -59,21 +61,28 @@ const computeInit=Fn(()=>{
       float(0),float(1).sub(smoothstep(mR.sub(1.5),mR,dist))))
 })().compute(BC);
 
+// ── computeUpdate WITH mouse repulsion ──
 const computeUpdate=Fn(()=>{
   const b=bladeData.element(instanceIndex);
   const bn=bendState.element(instanceIndex);
+
+  // Wind sway
   const w1=sin(b.x.mul(.35).add(b.y.mul(.12)).add(time.mul(windSpeed)));
   const w2=sin(b.x.mul(.18).add(b.y.mul(.28)).add(time.mul(windSpeed.mul(.67))).add(1.7));
   const wx=w1.add(w2).mul(windAmplitude);
   const wz=w1.sub(w2).mul(windAmplitude.mul(.55));
+
+  // Mouse repulsion: blades push away from cursor world position
   const mdx=b.x.sub(mouseWorldX);
   const mdz=b.y.sub(mouseWorldZ);
   const mdist=sqrt(mdx.mul(mdx).add(mdz.mul(mdz))).max(float(.001));
   const repelFactor=smoothstep(float(3.5),float(0),mdist).mul(float(1.4)).mul(mouseActive);
   const repelX=mdx.div(mdist).mul(repelFactor);
   const repelZ=mdz.div(mdist).mul(repelFactor);
+
   const targetX=wx.add(repelX);
   const targetZ=wz.add(repelZ);
+
   const lw=deltaTime.mul(5).saturate();
   bn.x.assign(mix(bn.x,targetX,lw));
   bn.y.assign(mix(bn.y,targetZ,lw));
@@ -163,6 +172,7 @@ window.addEventListener('resize',()=>{
   renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight)
 });
 
+// ── Mouse tracking → world space ──
 const raycaster=new THREE.Raycaster();
 const mouse2D=new THREE.Vector2();
 const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
@@ -192,9 +202,10 @@ let camT=0;
 function animate(){
   const dt=Math.min(clock.getDelta(),.05);
   camT+=dt*.12;
-  camera.position.x=Math.sin(camT*.4)*.7;
-  camera.position.y=3.2+Math.sin(camT*.25)*.25;
-  camera.lookAt(0,0.8,0);
+  // Gentle slow sway
+  camera.position.x=Math.sin(camT*.4)*.5;
+  camera.position.y=1.8+Math.sin(camT*.25)*.15;
+  camera.lookAt(0,0.5,0);
   renderer.compute(computeUpdate);
   pp.render();
 }

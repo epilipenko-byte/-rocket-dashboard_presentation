@@ -441,107 +441,50 @@ nav.tabs::-webkit-scrollbar { display: none; }
 .task-text { flex: 1; font-size: 13px; line-height: 1.5; }
 .task-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
 
-/* ── NOTES ── */
-/* ── GOOGLE-SHEETS STYLE NOTES ── */
-/* Empty-state click zone (no note yet) */
-.note-add-zone {
-  position: absolute; top: 0; right: 0;
-  width: 32px; height: 32px; z-index: 8; cursor: pointer;
-  opacity: 0; transition: opacity .2s;
-}
-.chart-card:hover .note-add-zone { opacity: 1; }
-.note-add-zone::before {
-  content: '📝'; position: absolute;
-  top: 6px; right: 6px; font-size: 14px;
-  opacity: 0.4;
-}
-.note-add-zone:hover::before { opacity: 1; }
-
-/* Triangle indicator when note exists */
+/* ── NOTES — Google Sheets style ── */
+/* Orange triangle corner indicator (note exists) */
 .note-indicator {
   position: absolute; top: 0; right: 0;
-  width: 0; height: 0; z-index: 8; cursor: pointer;
+  width: 0; height: 0; z-index: 8; pointer-events: none;
   border-style: solid;
-  border-width: 0 16px 16px 0;
-  border-color: transparent var(--yellow) transparent transparent;
-  filter: drop-shadow(0 0 3px rgba(251,191,36,0.6));
+  border-width: 0 14px 14px 0;
+  border-color: transparent #f59e0b transparent transparent;
 }
 
-/* Hover tooltip */
-.note-tooltip {
-  position: absolute; z-index: 200;
-  top: 2px; right: 20px;
-  background: rgba(18, 28, 12, 0.97);
-  border: 1px solid rgba(251,191,36,0.5);
-  border-radius: 8px;
-  padding: 10px 14px;
-  min-width: 160px; max-width: 280px;
-  font-size: 12px; line-height: 1.6;
-  color: var(--text);
-  box-shadow: -4px 4px 20px rgba(0,0,0,0.6);
-  pointer-events: none;
-  opacity: 0; transform: translateX(6px);
-  transition: opacity .18s, transform .18s;
-  white-space: pre-wrap; word-break: break-word;
+/* Inline editable popover */
+.note-popover {
+  position: absolute; top: -4px; right: 18px;
+  width: 230px;
+  background: #fef9c3;
+  border: 1px solid #c8a32a;
+  border-radius: 3px;
+  padding: 8px 10px;
+  z-index: 400;
+  box-shadow: 3px 5px 18px rgba(0,0,0,0.5);
+  display: none;
+  font-family: Arial, sans-serif;
 }
-/* Arrow pointing right toward the triangle */
-.note-tooltip::after {
-  content: '';
-  position: absolute; top: 4px; right: -7px;
-  border: 7px solid transparent;
-  border-left-color: rgba(251,191,36,0.5);
+.note-popover.visible { display: block; }
+.note-popover-ta {
+  width: 100%; box-sizing: border-box;
+  min-height: 70px; max-height: 180px;
+  background: transparent; border: none;
+  resize: vertical;
+  font-size: 12px; color: #1a1a0a;
+  font-family: Arial, sans-serif;
+  line-height: 1.55; outline: none; padding: 0;
 }
-.note-indicator:hover ~ .note-tooltip,
-.note-tooltip.pinned {
-  opacity: 1; transform: translateX(0); pointer-events: auto;
+.note-popover-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 5px; font-size: 10px; color: #7c6b2b;
+  border-top: 1px solid rgba(180,140,20,0.3); padding-top: 4px;
 }
-.note-tooltip-meta {
-  font-size: 10px; color: var(--muted);
-  margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.08);
-  padding-bottom: 4px;
+.note-del-sm {
+  background: none; border: none; cursor: pointer;
+  font-size: 10px; color: #b05020; padding: 0;
+  font-family: Arial, sans-serif;
 }
-
-/* Note modal */
-#noteModal {
-  display: none; position: fixed; inset: 0; z-index: 500;
-  align-items: center; justify-content: center;
-  background: rgba(5,15,5,0.75); backdrop-filter: blur(8px);
-}
-#noteModal.open { display: flex; }
-.note-modal-box {
-  background: rgba(10,22,10,0.97);
-  border: 1px solid var(--border);
-  border-radius: 16px; padding: 28px;
-  width: 420px; max-width: 95vw;
-  backdrop-filter: blur(20px);
-}
-.note-modal-title {
-  font-size: 14px; font-weight: 700; margin-bottom: 12px;
-  color: var(--accent);
-}
-.note-modal-period {
-  font-size: 11px; color: var(--muted); margin-bottom: 16px;
-}
-.note-textarea {
-  width: 100%; min-height: 100px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  border-radius: 8px; padding: 12px;
-  color: var(--text); font-family: var(--font);
-  font-size: 13px; line-height: 1.6;
-  resize: vertical; outline: none;
-}
-.note-textarea:focus { border-color: var(--accent); }
-.note-modal-btns {
-  display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end;
-}
-.note-del-btn {
-  margin-right: auto; background: transparent;
-  border: 1px solid rgba(248,113,113,0.3); color: var(--red);
-  border-radius: 8px; padding: 7px 14px; cursor: pointer;
-  font-family: var(--font); font-size: 12px;
-}
-.note-del-btn:hover { background: rgba(248,113,113,0.1); }
+.note-del-sm:hover { text-decoration: underline; }
 
 /* ── LOADER ── */
 .loading-overlay {
@@ -656,19 +599,6 @@ nav.tabs::-webkit-scrollbar { display: none; }
   <main id="mainContent"></main>
 </div>
 
-<!-- NOTE MODAL -->
-<div id="noteModal">
-  <div class="note-modal-box">
-    <div class="note-modal-title" id="noteModalTitle">Заметка к диаграмме</div>
-    <div class="note-modal-period" id="noteModalPeriod"></div>
-    <textarea class="note-textarea" id="noteTextarea" placeholder="Введите комментарий к диаграмме…"></textarea>
-    <div class="note-modal-btns">
-      <button class="note-del-btn" onclick="deleteNote()">🗑 Удалить</button>
-      <button class="btn btn-outline" onclick="closeNoteModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveNote()">Сохранить</button>
-    </div>
-  </div>
-</div>
 
 <div class="demo-badge" id="demoBadge">DEMO</div>
 
@@ -798,10 +728,8 @@ const TABS = [
   { id:'model',      label:'Модель'       },
   { id:'calendar',   label:'Плат. календарь'},
   { id:'tasks',      label:'Задачи'       },
-  { id:'ckp',           label:'ЦКП'              },
-  { id:'roadmap_ckp',   label:'Дорожная ЦКП'    },
-  { id:'roadmap_tasks', label:'Дорожная задачи'  },
-  { id:'results',       label:'Результаты'       },
+  { id:'ckp',        label:'ЦКП'          },
+  { id:'results',    label:'Результаты'   },
   { id:'ai',            label:'Выводы ✦'         },
 ];
 
@@ -885,11 +813,18 @@ function switchTab(id) {
 function buildPeriodSelectors() {
   const from = document.getElementById('periodFrom');
   const to   = document.getElementById('periodTo');
+  // Clear existing options before rebuilding
+  from.innerHTML = '';
+  to.innerHTML   = '';
   const _months = (state.data && state.data.months && state.data.months.length) ? state.data.months : DEMO.months;
   _months.forEach((m, i) => {
     from.add(new Option(m, i));
     to.add(new Option(m, i));
   });
+  // Clamp indices to new length
+  const maxIdx = _months.length - 1;
+  state.fromIdx = Math.min(state.fromIdx, maxIdx);
+  state.toIdx   = Math.min(state.toIdx,   maxIdx);
   from.value = state.fromIdx;
   to.value   = state.toIdx;
 }
@@ -926,6 +861,13 @@ async function loadData() {
     // Merge: real data overrides DEMO fallback
     state.data = { ...DEMO, ...json };
     if (json.months && json.months.length > 0) state.data.months = json.months;
+    // Merge notes from Sheets into localStorage (localStorage wins for conflicts)
+    if (json.dashboard_notes && typeof json.dashboard_notes === 'object') {
+      Object.entries(json.dashboard_notes).forEach(([k, v]) => {
+        if (v && !state.notes[k]) state.notes[k] = v;
+      });
+      localStorage.setItem('rkt_notes', JSON.stringify(state.notes));
+    }
 
     // Diagnostic: warn if some reports failed
     const errs = json.report_errors || [];
@@ -943,6 +885,8 @@ async function loadData() {
 
     document.getElementById('statusText').textContent = 'Обновлено · ' + new Date().toLocaleTimeString('ru');
     document.getElementById('demoBadge').style.display = 'none';
+    // Rebuild period selectors with real months (may include Jun, Jul, ...)
+    buildPeriodSelectors();
     renderCurrentTab();
   } catch(e) {
     state.data = DEMO;
@@ -999,23 +943,16 @@ function renderCurrentTab() {
     case 'model':      renderModel(d); break;
     case 'calendar':   renderCalendar(d); break;
     case 'tasks':      renderTasks(d); break;
-    case 'ckp':           renderCKP(d); break;
-    case 'roadmap_ckp':   renderRoadmapCKP(d); break;
-    case 'roadmap_tasks': renderRoadmapTasks(d); break;
-    case 'results':       renderResults(d); break;
+    case 'ckp':     renderCKP(d); break;
+    case 'results': renderResults(d); break;
     case 'ai':            renderAITab(d); break;
   }
 }
 
 /* ═══════════════════════════════════════════════
-   NOTES SYSTEM
+   NOTES — Google Sheets–style hover popovers
 ═══════════════════════════════════════════════ */
-let _noteTarget = null; // { chartId, cardEl }
-
-// Note key is per-chart only (not period-specific) — persists across all periods
-function noteKey(chartId) {
-  return `note:${chartId}`;
-}
+function noteKey(chartId) { return `note:${chartId}`; }
 
 function attachNote(canvasId, chartTitle) {
   const canvas = document.getElementById(canvasId);
@@ -1024,85 +961,106 @@ function attachNote(canvasId, chartTitle) {
   if (!card) return;
 
   card.style.position = 'relative';
-
-  // Remove any previous note elements
-  card.querySelectorAll('.note-indicator,.note-tooltip,.note-add-zone').forEach(el => el.remove());
+  card.querySelectorAll('.note-indicator,.note-popover').forEach(el => el.remove());
 
   const key = noteKey(canvasId);
   const existing = state.notes[key];
 
+  // Orange corner triangle when note exists
   if (existing) {
-    // Triangle indicator
     const tri = document.createElement('div');
     tri.className = 'note-indicator';
-    tri.title = 'Нажмите чтобы редактировать заметку';
-    tri.onclick = () => openNoteModal(canvasId, chartTitle || canvasId, card);
-
-    // Floating tooltip shown on hover
-    const tip = document.createElement('div');
-    tip.className = 'note-tooltip';
-    tip.innerHTML = `<div class="note-tooltip-meta">📝 ${existing.date}</div>${existing.text.replace(/</g,'&lt;')}`;
-
-    // Keep tooltip visible while hovering it
-    tip.addEventListener('mouseenter', () => tip.classList.add('pinned'));
-    tip.addEventListener('mouseleave', () => tip.classList.remove('pinned'));
-    tip.onclick = () => openNoteModal(canvasId, chartTitle || canvasId, card);
-
     card.appendChild(tri);
-    card.appendChild(tip);
-  } else {
-    // Ghost zone — appears on card hover so user can add a note
-    const zone = document.createElement('div');
-    zone.className = 'note-add-zone';
-    zone.title = 'Добавить заметку';
-    zone.onclick = () => openNoteModal(canvasId, chartTitle || canvasId, card);
-    card.appendChild(zone);
   }
+
+  // Build editable popover (always present, shown on hover)
+  const pop = document.createElement('div');
+  pop.className = 'note-popover';
+
+  const safeText = existing ? existing.text.replace(/&/g,'&amp;').replace(/</g,'&lt;') : '';
+  pop.innerHTML = `
+    <textarea class="note-popover-ta" placeholder="Добавить примечание…">${safeText}</textarea>
+    <div class="note-popover-footer">
+      <span class="note-popover-date" style="color:#7c6b2b;font-size:10px">${existing ? existing.date : ''}</span>
+      ${existing ? `<button class="note-del-sm" type="button">🗑 Удалить</button>` : ''}
+    </div>`;
+
+  const ta = pop.querySelector('.note-popover-ta');
+  let saveTimer;
+
+  function persistNote() {
+    clearTimeout(saveTimer);
+    const text = ta.value.trim();
+    if (!text) {
+      delete state.notes[key];
+      card.querySelectorAll('.note-indicator').forEach(el => el.remove());
+      const footer = pop.querySelector('.note-popover-footer');
+      if (footer) footer.innerHTML = '';
+    } else {
+      const date = new Date().toLocaleDateString('ru');
+      state.notes[key] = { text, date };
+      // Ensure triangle exists
+      if (!card.querySelector('.note-indicator')) {
+        const tri = document.createElement('div');
+        tri.className = 'note-indicator';
+        card.insertBefore(tri, pop);
+      }
+      // Update footer
+      const dateEl = pop.querySelector('.note-popover-date');
+      if (dateEl) dateEl.textContent = date;
+      if (!pop.querySelector('.note-del-sm')) {
+        const btn = document.createElement('button');
+        btn.className = 'note-del-sm'; btn.type = 'button'; btn.textContent = '🗑 Удалить';
+        btn.onclick = () => deleteNoteInline(canvasId, card, pop);
+        pop.querySelector('.note-popover-footer').appendChild(btn);
+      }
+    }
+    localStorage.setItem('rkt_notes', JSON.stringify(state.notes));
+    _syncNoteToSheets(canvasId);
+  }
+
+  ta.addEventListener('input', () => { clearTimeout(saveTimer); saveTimer = setTimeout(persistNote, 700); });
+  ta.addEventListener('blur',  () => { clearTimeout(saveTimer); persistNote(); });
+
+  const delBtn = pop.querySelector('.note-del-sm');
+  if (delBtn) delBtn.onclick = () => deleteNoteInline(canvasId, card, pop);
+
+  card.appendChild(pop);
+
+  // Show on card hover; keep visible while over popover
+  let overCard = false, overPop = false;
+  function tryShow()  { pop.classList.add('visible'); }
+  function tryHide()  { setTimeout(() => { if (!overCard && !overPop) pop.classList.remove('visible'); }, 150); }
+  card.addEventListener('mouseenter', () => { overCard = true;  tryShow(); });
+  card.addEventListener('mouseleave', () => { overCard = false; tryHide(); });
+  pop.addEventListener('mouseenter',  () => { overPop  = true;  });
+  pop.addEventListener('mouseleave',  () => { overPop  = false; tryHide(); });
 }
 
-function openNoteModal(chartId, title, cardEl) {
-  _noteTarget = { chartId, cardEl };
-  const key = noteKey(chartId);
-  const existing = state.notes[key];
-  document.getElementById('noteModalTitle').textContent = '📝 ' + title;
-  document.getElementById('noteModalPeriod').textContent =
-    'Период: ' + ((state.data.months||DEMO.months)[state.fromIdx] || '') + ' — ' + ((state.data.months||DEMO.months)[state.toIdx] || '');
-  document.getElementById('noteTextarea').value = existing ? existing.text : '';
-  document.getElementById('noteModal').classList.add('open');
-  setTimeout(() => document.getElementById('noteTextarea').focus(), 100);
-}
-
-function closeNoteModal() {
-  document.getElementById('noteModal').classList.remove('open');
-  _noteTarget = null;
-}
-
-function saveNote() {
-  if (!_noteTarget) return;
-  const text = document.getElementById('noteTextarea').value.trim();
-  if (!text) { deleteNote(); return; }
-  const key = noteKey(_noteTarget.chartId);
-  state.notes[key] = { text, date: new Date().toLocaleDateString('ru') };
-  localStorage.setItem('rkt_notes', JSON.stringify(state.notes));
-  // refresh button + display
-  attachNote(_noteTarget.chartId, document.getElementById('noteModalTitle').textContent.replace('📝 ',''));
-  closeNoteModal();
-}
-
-function deleteNote() {
-  if (!_noteTarget) return;
-  const key = noteKey(_noteTarget.chartId);
+function deleteNoteInline(canvasId, card, pop) {
+  const key = noteKey(canvasId);
   delete state.notes[key];
   localStorage.setItem('rkt_notes', JSON.stringify(state.notes));
-  attachNote(_noteTarget.chartId, '');
-  closeNoteModal();
+  card.querySelectorAll('.note-indicator').forEach(el => el.remove());
+  const ta = pop.querySelector('.note-popover-ta');
+  if (ta) ta.value = '';
+  const footer = pop.querySelector('.note-popover-footer');
+  if (footer) footer.innerHTML = '';
+  _syncNoteToSheets(canvasId);
 }
 
-// Close modal on backdrop click
-document.addEventListener('click', e => {
-  const modal = document.getElementById('noteModal');
-  if (modal && e.target === modal) closeNoteModal();
-});
+// Best-effort async sync to Google Sheets (non-blocking)
+async function _syncNoteToSheets(canvasId) {
+  if (CONFIG.DEMO || !CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.includes('YOUR_')) return;
+  const note = state.notes[noteKey(canvasId)] || null;
+  try {
+    await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ action: 'writeNote', key: canvasId, note })
+    });
+  } catch(e) { /* localStorage is the primary store; silent fail is fine */ }
+}
 
 /* ═══════════════════════════════════════════════
    HELPER: CHART FACTORY
