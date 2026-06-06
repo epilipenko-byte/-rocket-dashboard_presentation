@@ -1,566 +1,573 @@
 /**
- * Rocket Financial Dashboard — Google Apps Script Data Proxy
- * Версия: 4.0 | 01 июня 2026
+ * ROCKET Dashboard — Google Apps Script Data Proxy
+ * ─────────────────────────────────────────────────
+ * Деплой: script.google.com → New project → вставить код →
+ *         Deploy → Web app → Execute as: Me → Who: Anyone → Deploy → Copy URL
  *
- * Принцип работы:
- * 1. Читает лист "Reports" из Dashboard Config (visible=TRUE)
- * 2. Для каждого отчёта читает данные из Google Sheets по sheet_id и sheet_name
- * 3. Трансформирует в единый JSON-формат для дашборда
- * 4. Возвращает через doGet() с CORS-заголовками
+ * После деплоя: вставить URL в index.html, переменная CONFIG.APPS_SCRIPT_URL
+ * и поменять CONFIG.DEMO = false
  *
- * Деплой:
- * - Расширения → Apps Script → вставить код → Развернуть → Новое развёртывание
- * - Тип: Веб-приложение, Доступ: Все
- * - Скопировать URL и вставить в index.html как DATA_PROXY_URL
+ * Dashboard Config Sheet ID:
+ * 1EKR-czK1UvXZDIJUe5MLb70yZXyEMe1VIYTx15UOY3E
  */
 
-// ID Dashboard Config (не меняй)
-const CONFIG_SHEET_ID = '1EKR-czK1UvXZDIJUe5MLb70yZXyEMe1VIYTx15UOY3E';
+const DASHBOARD_CONFIG_ID = '1EKR-czK1UvXZDIJUe5MLb70yZXyEMe1VIYTx15UOY3E';
 
-// Шаблонные переменные (из листа Допущения)
-const ANALYSIS_MONTH = 4;   // апрель (1-indexed)
-const ANALYSIS_YEAR = 2026;
-
-// ============================================================
-// ТОЧКА ВХОДА — HTTP GET
-// ============================================================
+// ── MAIN ENTRY POINT ──────────────────────────────────────────
 function doGet(e) {
-  const params = e ? e.parameter : {};
-  const action = params.action || 'get_all';
-
+  const action = e && e.parameter && e.parameter.action || 'getData';
   let result;
   try {
-    if (action === 'get_all') {
-      result = getAllData();
-    } else if (action === 'add_note') {
-      result = { ok: false, error: 'Use POST for notes' };
-    } else {
-      result = { ok: false, error: 'Unknown action' };
-    }
+    if (action === 'getData')        result = getData();
+    else if (action === 'getConfig') result = getConfig();
+    else result = { error: 'Unknown action' };
   } catch (err) {
-    result = { ok: false, error: err.toString(), stack: err.stack };
+    result = { error: err.message, stack: err.stack };
   }
-
   return ContentService
     .createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ============================================================
-// ТОЧКА ВХОДА — HTTP POST (примечания)
-// ============================================================
-function doPost(e) {
-  let result;
-  try {
-    const body = JSON.parse(e.postData.contents);
-    if (body.action === 'get_all') {
-      result = getAllData();
-    } else if (body.action === 'add_note') {
-      result = addNote(body.note);
-    } else {
-      result = { ok: false, error: 'Unknown action' };
-    }
-  } catch (err) {
-    result = { ok: false, error: err.toString() };
-  }
+// ── GET DATA ──────────────────────────────────────────────────
+function getData() {
+  const ss = SpreadsheetApp.openById(DASHBOARD_CONFIG_ID);
+  const reportsSheet = ss.getSheetByName('Reports');
+  if (!reportsSheet) throw new Error('Sheet "Reports" not found in Dashboard Config');
 
-  return ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+  const reports = getSheetData(reportsSheet);
 
-// ============================================================
-// ГЛАВНАЯ ФУНКЦИЯ — СБОРКА ВСЕХ ДАННЫХ
-// ============================================================
-function getAllData() {
-  const config = SpreadsheetApp.openById(CONFIG_SHEET_ID);
+  // Column "Верхний подвал" normalises to "верхний_подвал" — that is the report ID
+  // Filter: only rows where visible = TRUE / true / 1
+  const visible = reports.filter(r => {
+    const v = String(r.visible || r['видимый'] || '').toLowerCase().trim();
+    return v === 'true' || v === '1' || v === 'да';
+  });
 
-  // 1. Читаем конфигурацию отчётов
-  const reports = getReports(config);
-
-  // 2. Читаем данные по каждому видимому отчёту
-  const rawData = {};
-  for (const report of reports) {
-    if (report.visible !== 'TRUE' && report.visible !== true) continue;
-    try {
-      rawData[report.id] = readSheetData(report.sheet_id, report.sheet_name);
-    } catch (err) {
-      rawData[report.id] = { error: err.toString() };
-    }
-  }
-
-  // 3. Трансформируем в формат дашборда
-  const dashboard = transformData(rawData);
-
-  // 4. Добавляем метаданные
-  dashboard.threshold_rules = getThresholdRules(config);
-  dashboard.notes = getNotes(config);
-  dashboard.analysis = getAIAnalysis(config);
-  dashboard.assumptions = getAssumptions(config);
-  dashboard.updated_at = new Date().toISOString();
-  dashboard.ok = true;
-
-  return dashboard;
-}
-
-// ============================================================
-// ЧТЕНИЕ КОНФИГУРАЦИИ
-// ============================================================
-function getReports(config) {
-  const sheet = config.getSheetByName('Reports');
-  if (!sheet) return [];
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  return data.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i]; });
-    return obj;
-  }).filter(r => r.id);
-}
-
-function getThresholdRules(config) {
-  const sheet = config.getSheetByName('Threshold Rules');
-  if (!sheet) return [];
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  return data.slice(1)
-    .map(row => {
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = row[i]; });
-      return obj;
-    })
-    .filter(r => r.active === 'TRUE' || r.active === true);
-}
-
-function getNotes(config) {
-  const sheet = config.getSheetByName('Notes');
-  if (!sheet) return [];
-  const data = sheet.getDataRange().getValues();
-  if (data.length < 2) return [];
-  const headers = data[0];
-  return data.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i]; });
-    return obj;
-  }).filter(r => r.chart_id || r.text);
-}
-
-function getAIAnalysis(config) {
-  const sheet = config.getSheetByName('AI Analysis');
-  if (!sheet) return null;
-  const data = sheet.getDataRange().getValues();
-  if (data.length < 2) return null;
-  // Берём последнюю запись
-  const headers = data[0];
-  const lastRow = data[data.length - 1];
-  const obj = {};
-  headers.forEach((h, i) => { obj[h] = lastRow[i]; });
-  return obj;
-}
-
-function getAssumptions(config) {
-  const sheet = config.getSheetByName('Допущения');
-  if (!sheet) return [];
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  return data.slice(1)
-    .map(row => {
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = row[i]; });
-      return obj;
-    })
-    .filter(r => r.active === 'TRUE' || r.active === true);
-}
-
-// ============================================================
-// ЧТЕНИЕ ДАННЫХ ИЗ GOOGLE SHEETS
-// ============================================================
-function readSheetData(sheetUrl, sheetName) {
-  // Извлекаем ID таблицы из URL
-  const match = sheetUrl.toString().match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (!match) throw new Error('Invalid sheet URL: ' + sheetUrl);
-  const sheetId = match[1];
-
-  // Подставляем шаблонные переменные в имя листа
-  const resolvedName = resolveSheetName(sheetName.toString());
-
-  const ss = SpreadsheetApp.openById(sheetId);
-  const sheet = ss.getSheetByName(resolvedName);
-  if (!sheet) {
-    // Попробуем найти лист по частичному совпадению
-    const sheets = ss.getSheets();
-    const found = sheets.find(s => s.getName().includes(resolvedName.split(' ')[0]));
-    if (!found) throw new Error('Sheet not found: ' + resolvedName + ' in ' + sheetId);
-    return found.getDataRange().getValues();
-  }
-
-  return sheet.getDataRange().getValues();
-}
-
-function resolveSheetName(name) {
-  const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
-                      'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-  const monthName = monthNames[ANALYSIS_MONTH - 1];
-  return name
-    .replace('{month}', ANALYSIS_MONTH.toString().padStart(2, '0'))
-    .replace('{year}', ANALYSIS_YEAR.toString())
-    .replace('{month_name}', monthName);
-}
-
-// ============================================================
-// ТРАНСФОРМАЦИЯ ДАННЫХ В ФОРМАТ ДАШБОРДА
-// ============================================================
-function transformData(raw) {
-  const D = {
-    months: [],
-    revenue: [],
-    var_costs: [],
-    margin_pct: [],
-    gross_margin_pct: [],
-    op_margin_pct: [],
-    np_margin_pct: [],
-    op_profit: [],
-    net_profit: [],
-    traffic_cost: [],
-    indirect: [],
-    interest: [],
-    ncf_op: [],
-    ncf_inv: [],
-    ncf_fin: [],
-    dividends: [],
-    cash: [],
-    assets_total: [],
-    equity: [],
-    liabilities: [],
-    lt_debt: [],
-    st_debt: [],
-    kz: [],
-    current_ratio: [],
-    abs_liquidity: [],
-    fin_stability: [],
-    autonomy: [],
-    de_ratio: [],
-    roe_monthly: [],
-    roa_monthly: [],
-    dfl: [],
-    rev_core: [],
-    rev_streams: [],
-    rev_influence: [],
-    rev_mannequin: [],
-    tr_fb: [],
-    tr_tg: [],
-    tr_teasers: [],
-    tr_influence: [],
-    tr_pp: [],
-    tr_google: [],
-    ftd_old: [],
-    ftd_new: [],
-    ftd_total: [],
-    crm_rev: [],
-    crm_pct: [],
-    // Дополнительные данные для новых вкладок
-    pnl_combo: null,
-    pnl_consol: null,
-    model_data: null,
-    payment_data: null,
-    tasks_data: null,
-    ckp_data: null,
+  // Collect all data series
+  const result = {
+    report_errors: [], // filled below if any report fails to load
+    months:         [],
+    revenue:        [],
+    var_costs:      [],
+    indirect:       [],
+    op_profit:      [],
+    interest:       [],
+    net_profit:     [],
+    margin_pct:     [],
+    op_margin_pct:  [],
+    np_margin_pct:  [],
+    ncf_op:         [],
+    ncf_inv:        [],
+    ncf_fin:        [],
+    dividends:      [],
+    cash:           [],
+    assets_total:   [],
+    equity:         [],
+    liabilities:    [],
+    current_ratio:  [],
+    autonomy:       [],
+    de_ratio:       [],
+    dfl:            [],
+    crm_pct:        [],
+    ftd_new:        [],
+    ftd_old:        [],
+    rev_core:       [],
+    rev_influence:  [],
+    rev_streams:    [],
+    rev_mannequin:  [],
+    tr_fb:          [],
+    tr_tg:          [],
+    payment_cal:    [],
+    roadmap_ckp:    null,
+    roadmap_tasks:  null,
   };
 
-  // ---- ОПиУ (opiu) ----
-  if (raw.opiu && !raw.opiu.error) {
-    parseOPIU(raw.opiu, D);
-  }
+  // Map real report IDs (from "Верхний подвал" column) to reader functions
+  const REPORT_MAP = {
+    // P&L / ОПиУ variants
+    'opiu':           readPnL,
+    'opiu_combo':     readPnL,
+    'opiu_consol':    readPnL,
+    'opiu_model':     readPnL,
+    // Cash flow / ДДС variants
+    'dds_common':     readCashflow,
+    'dds_operations': readCashflow,
+    // Balance
+    'balance':        readBalance,
+    // Traffic / GM
+    'traffic':        readTraffic,
+    // Payment calendar
+    'payment_cal':    readPaymentCal,
+    'payment_plan':   readPaymentCal,
+    // Roadmap
+    'roadmap_ckp':    readRoadmapCkp,
+    'roadmap_tasks':  readRoadmapTasks,
+  };
 
-  // ---- ДДС (dds_common) ----
-  if (raw.dds_common && !raw.dds_common.error) {
-    parseDDS(raw.dds_common, D);
-  }
+  // Process each visible report
+  visible.forEach(report => {
+    // The report ID lives in the column "Верхний подвал" → normalised key "верхний_подвал"
+    const reportId = String(
+      report['верхний_подвал'] || report['report_type'] || report['id'] || ''
+    ).toLowerCase().trim();
 
-  // ---- Баланс (balance) ----
-  if (raw.balance && !raw.balance.error) {
-    parseBalance(raw.balance, D);
-  }
-
-  // ---- Трафик (traffic) ----
-  if (raw.traffic && !raw.traffic.error) {
-    parseTraffic(raw.traffic, D);
-  }
-
-  // ---- ОПиУ блоки (opiu_combo) ----
-  if (raw.opiu_combo && !raw.opiu_combo.error) {
-    D.pnl_combo = raw.opiu_combo;
-  }
-
-  // ---- Консолидация (opiu_consol) ----
-  if (raw.opiu_consol && !raw.opiu_consol.error) {
-    D.pnl_consol = raw.opiu_consol;
-  }
-
-  // ---- Модель (opiu_model) ----
-  if (raw.opiu_model && !raw.opiu_model.error) {
-    D.model_data = raw.opiu_model;
-    parseModel(raw.opiu_model, D);
-  }
-
-  // ---- Платёжный календарь (payment_cal) ----
-  if (raw.payment_cal && !raw.payment_cal.error) {
-    D.payment_data = raw.payment_cal;
-  }
-
-  // ---- ЦКП (roadmap_ckp) ----
-  if (raw.roadmap_ckp && !raw.roadmap_ckp.error) {
-    D.ckp_data = raw.roadmap_ckp;
-  }
-
-  // ---- Задачи (roadmap_tasks) ----
-  if (raw.roadmap_tasks && !raw.roadmap_tasks.error) {
-    D.tasks_data = raw.roadmap_tasks;
-  }
-
-  return D;
-}
-
-// ============================================================
-// ПАРСЕРЫ ПО ТИПАМ ОТЧЁТОВ
-// ============================================================
-
-function parseOPIU(rows, D) {
-  // Ищем строки по ключевым словам
-  // Структура: первая колонка — метрика, остальные — месяцы
-  const monthRow = findRow(rows, ['Месяц', 'месяц', 'Период', 'Jan', 'Янв']);
-  if (monthRow) {
-    D.months = monthRow.slice(1).filter(v => v !== '' && v !== null);
-  }
-
-  const revRow = findRow(rows, ['Выручка', 'Revenue', 'Доход']);
-  if (revRow) D.revenue = parseNumbers(revRow.slice(1), D.months.length);
-
-  const vcRow = findRow(rows, ['Переменные расходы', 'Перем.расходы', 'Перем. расходы', 'Variable']);
-  if (vcRow) D.var_costs = parseNumbers(vcRow.slice(1), D.months.length);
-
-  const opRow = findRow(rows, ['Операционная прибыль', 'Опер. прибыль', 'EBIT', 'Опер.прибыль']);
-  if (opRow) D.op_profit = parseNumbers(opRow.slice(1), D.months.length);
-
-  const npRow = findRow(rows, ['Чистая прибыль', 'ЧП', 'Net profit', 'Прибыль чистая']);
-  if (npRow) D.net_profit = parseNumbers(npRow.slice(1), D.months.length);
-
-  const trRow = findRow(rows, ['Трафик', 'Затраты на трафик', 'Traffic']);
-  if (trRow) D.traffic_cost = parseNumbers(trRow.slice(1), D.months.length);
-
-  const indRow = findRow(rows, ['Косвенные', 'Косвенные расходы', 'Indirect', 'Накладные']);
-  if (indRow) D.indirect = parseNumbers(indRow.slice(1), D.months.length);
-
-  const intRow = findRow(rows, ['Проценты', 'Процентные расходы', 'Interest', '% кредит']);
-  if (intRow) D.interest = parseNumbers(intRow.slice(1), D.months.length);
-
-  // Рентабельности
-  const n = D.months.length;
-  for (let i = 0; i < n; i++) {
-    const rev = D.revenue[i] || 0;
-    const vc = D.var_costs[i] || 0;
-    const op = D.op_profit[i] || 0;
-    const np = D.net_profit[i] || 0;
-    if (rev > 0) {
-      D.margin_pct.push(round2((rev - vc) / rev * 100));
-      D.gross_margin_pct.push(round2((rev - vc) / rev * 100));
-      D.op_margin_pct.push(round2(op / rev * 100));
-      D.np_margin_pct.push(round2(np / rev * 100));
-    } else {
-      D.margin_pct.push(0);
-      D.gross_margin_pct.push(0);
-      D.op_margin_pct.push(0);
-      D.np_margin_pct.push(0);
+    const handler = REPORT_MAP[reportId];
+    if (handler && report.sheet_id && report.sheet_name) {
+      try {
+        handler(report, result);
+      } catch (e) {
+        Logger.log('Error reading ' + reportId + ': ' + e.message);
+        result.report_errors.push(reportId + ' (' + e.message.substring(0,40) + ')');
+      }
+    } else if (!handler && reportId) {
+      Logger.log('No handler for report id: ' + reportId);
     }
+  });
+
+  // Populate months fallback
+  if (result.months.length === 0 && result.revenue.length > 0) {
+    result.months = result.revenue.map((_, i) => 'Период ' + (i + 1));
   }
 
-  // Выручка по направлениям
-  const coreRow = findRow(rows, ['Core', 'Ядро', 'Основное']);
-  if (coreRow) D.rev_core = parseNumbers(coreRow.slice(1), n);
+  // Add config data
+  result.threshold_rules = getThresholdRules(ss);
+  result.assumptions      = getAssumptions(ss);
+  result.notes            = getNotes(ss);
+  result.ai_analysis_raw  = getAiAnalysis(ss);
 
-  const streamsRow = findRow(rows, ['Streams', 'Стримы', 'Rocket Streams']);
-  if (streamsRow) D.rev_streams = parseNumbers(streamsRow.slice(1), n);
-
-  const influenceRow = findRow(rows, ['Influence', 'Инфлюенс']);
-  if (influenceRow) D.rev_influence = parseNumbers(influenceRow.slice(1), n);
-
-  const mannequinRow = findRow(rows, ['Mannequin', 'Манекен']);
-  if (mannequinRow) D.rev_mannequin = parseNumbers(mannequinRow.slice(1), n);
+  return result;
 }
 
-function parseDDS(rows, D) {
-  const n = D.months.length || 5;
+// ── READ P&L / ОПиУ ──────────────────────────────────────────
+function readPnL(report, result) {
+  const ss = getSheetById(report.sheet_id);
+  if (!ss) return;
+  const sheet = getSheetByName(ss, report.sheet_name);
+  if (!sheet) return;
 
-  const ncfOpRow = findRow(rows, ['NCF операционный', 'NCF Операционный', 'Операционный NCF', 'NCF_op']);
-  if (ncfOpRow) D.ncf_op = parseNumbers(ncfOpRow.slice(1), n);
+  const data = sheet.getDataRange().getValues();
 
-  const ncfInvRow = findRow(rows, ['NCF инвестиционный', 'NCF Инвестиционный', 'Инвестиционный NCF']);
-  if (ncfInvRow) D.ncf_inv = parseNumbers(ncfInvRow.slice(1), n);
+  const KEYS = {
+    revenue:     ['выручка', 'доходы', 'revenue', 'итого выручка', 'общая выручка'],
+    var_costs:   ['переменные', 'variable', 'трафик', 'затраты на трафик'],
+    indirect:    ['постоянные', 'fixed', 'косвенные', 'накладные'],
+    op_profit:   ['ebit', 'опер', 'операционн', 'прибыль от продаж'],
+    interest:    ['проценты', 'interest', 'финансовые расходы'],
+    net_profit:  ['чистая', 'net profit', 'net_profit', 'чистая прибыль'],
+  };
 
-  const ncfFinRow = findRow(rows, ['NCF финансовый', 'NCF Финансовый', 'Финансовый NCF']);
-  if (ncfFinRow) D.ncf_fin = parseNumbers(ncfFinRow.slice(1), n);
+  const months = [];
+  let headerRow = null;
 
-  const divRow = findRow(rows, ['Дивиденды', 'Dividends', 'Дивид.']);
-  if (divRow) D.dividends = parseNumbers(divRow.slice(1), n);
+  // Find header row (contains month names or dates)
+  for (let i = 0; i < Math.min(10, data.length); i++) {
+    const row = data[i];
+    const monthCount = row.filter(c => isMonth(c)).length;
+    if (monthCount >= 2) { headerRow = i; break; }
+  }
 
-  const cashRow = findRow(rows, ['Остаток ДС', 'Кэш', 'Cash', 'Остаток денежных средств', 'Денежные средства']);
-  if (cashRow) D.cash = parseNumbers(cashRow.slice(1), n);
-}
+  if (headerRow !== null) {
+    const header = data[headerRow];
+    header.forEach((cell, j) => {
+      if (j > 0 && isMonth(cell)) months.push({ col: j, label: formatMonth(cell) });
+    });
+    if (result.months.length === 0) result.months = months.map(m => m.label);
+  }
 
-function parseBalance(rows, D) {
-  const n = D.months.length || 5;
-
-  const assetsRow = findRow(rows, ['Активы всего', 'Итого активы', 'Total assets', 'Баланс', 'Активы итого']);
-  if (assetsRow) D.assets_total = parseNumbers(assetsRow.slice(1), n);
-
-  const equityRow = findRow(rows, ['Капитал', 'Собственный капитал', 'Equity', 'СК']);
-  if (equityRow) D.equity = parseNumbers(equityRow.slice(1), n);
-
-  const liabRow = findRow(rows, ['Обязательства', 'Liabilities', 'Обяз.', 'Итого обязательства']);
-  if (liabRow) D.liabilities = parseNumbers(liabRow.slice(1), n);
-
-  const ltDebtRow = findRow(rows, ['Долгосрочные займы', 'ДЗ долгосрочные', 'LT debt', 'Долгосрочный долг']);
-  if (ltDebtRow) D.lt_debt = parseNumbers(ltDebtRow.slice(1), n);
-
-  const stDebtRow = findRow(rows, ['Краткосрочные займы', 'КЗ краткосрочные', 'ST debt', 'Краткосрочный долг']);
-  if (stDebtRow) D.st_debt = parseNumbers(stDebtRow.slice(1), n);
-
-  const kzRow = findRow(rows, ['Кредиторская задолженность', 'КЗ', 'Accounts payable']);
-  if (kzRow) D.kz = parseNumbers(kzRow.slice(1), n);
-
-  // Коэффициенты
-  const crRow = findRow(rows, ['Текущая ликвидность', 'Current ratio', 'Тек. ликвидность']);
-  if (crRow) D.current_ratio = parseNumbers(crRow.slice(1), n);
-
-  const alRow = findRow(rows, ['Абсолютная ликвидность', 'Абс. ликвидность', 'Abs liquidity']);
-  if (alRow) D.abs_liquidity = parseNumbers(alRow.slice(1), n);
-
-  const fsRow = findRow(rows, ['Финансовая устойчивость', 'Фин. устойчивость', 'Financial stability']);
-  if (fsRow) D.fin_stability = parseNumbers(fsRow.slice(1), n);
-
-  const autoRow = findRow(rows, ['Коэффициент автономии', 'Автономия', 'Autonomy', 'Коэф. автономии']);
-  if (autoRow) D.autonomy = parseNumbers(autoRow.slice(1), n);
-
-  const deRow = findRow(rows, ['D/E', 'Долг/Капитал', 'Debt to equity', 'D/E ratio']);
-  if (deRow) D.de_ratio = parseNumbers(deRow.slice(1), n);
-
-  const dflRow = findRow(rows, ['DFL', 'Финансовый рычаг', 'Эффект фин. рычага']);
-  if (dflRow) D.dfl = parseNumbers(dflRow.slice(1), n);
-
-  const roeRow = findRow(rows, ['ROE', 'Рентабельность капитала']);
-  if (roeRow) D.roe_monthly = parseNumbers(roeRow.slice(1), n);
-
-  const roaRow = findRow(rows, ['ROA', 'Рентабельность активов']);
-  if (roaRow) D.roa_monthly = parseNumbers(roaRow.slice(1), n);
-}
-
-function parseTraffic(rows, D) {
-  const n = D.months.length || 5;
-
-  const fbRow = findRow(rows, ['Facebook', 'FB', 'Фейсбук']);
-  if (fbRow) D.tr_fb = parseNumbers(fbRow.slice(1), n);
-
-  const tgRow = findRow(rows, ['Telegram', 'TG', 'Телеграм', 'TG Ads']);
-  if (tgRow) D.tr_tg = parseNumbers(tgRow.slice(1), n);
-
-  const teasRow = findRow(rows, ['Тизерки', 'Тизерные сети', 'Teasers']);
-  if (teasRow) D.tr_teasers = parseNumbers(teasRow.slice(1), n);
-
-  const infRow = findRow(rows, ['Influence', 'Инфлюенсеры', 'Блогеры']);
-  if (infRow) D.tr_influence = parseNumbers(infRow.slice(1), n);
-
-  const ppRow = findRow(rows, ['ПП', 'Партнёрские программы', 'PP', 'Affiliate']);
-  if (ppRow) D.tr_pp = parseNumbers(ppRow.slice(1), n);
-
-  const gRow = findRow(rows, ['Google', 'Google Ads']);
-  if (gRow) D.tr_google = parseNumbers(gRow.slice(1), n);
-}
-
-function parseModel(rows, D) {
-  const n = D.months.length || 5;
-
-  const ftdOldRow = findRow(rows, ['FTD старых', 'FTD old', 'FTD_old', 'Старые FTD']);
-  if (ftdOldRow) D.ftd_old = parseNumbers(ftdOldRow.slice(1), n);
-
-  const ftdNewRow = findRow(rows, ['FTD новых', 'FTD new', 'FTD_new', 'Новые FTD']);
-  if (ftdNewRow) D.ftd_new = parseNumbers(ftdNewRow.slice(1), n);
-
-  const ftdTotalRow = findRow(rows, ['FTD всего', 'FTD total', 'FTD итого', 'Всего FTD']);
-  if (ftdTotalRow) D.ftd_total = parseNumbers(ftdTotalRow.slice(1), n);
-
-  const crmRevRow = findRow(rows, ['CRM выручка', 'CRM Revenue', 'Выручка CRM']);
-  if (crmRevRow) D.crm_rev = parseNumbers(crmRevRow.slice(1), n);
-
-  const crmPctRow = findRow(rows, ['CRM %', 'CRM доля', 'CRM-доля', 'Доля CRM']);
-  if (crmPctRow) D.crm_pct = parseNumbers(crmPctRow.slice(1), n);
-}
-
-// ============================================================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// ============================================================
-
-/**
- * Ищет строку в массиве данных по ключевым словам в первой колонке
- */
-function findRow(rows, keywords) {
-  for (const row of rows) {
-    const cell = (row[0] || '').toString().trim();
-    for (const kw of keywords) {
-      if (cell.toLowerCase().includes(kw.toLowerCase())) {
-        return row;
+  // Find and extract data rows
+  for (const [key, keywords] of Object.entries(KEYS)) {
+    for (let i = headerRow || 0; i < data.length; i++) {
+      const label = String(data[i][0] || '').toLowerCase();
+      if (keywords.some(k => label.includes(k))) {
+        const vals = months.length > 0
+          ? months.map(m => toNum(data[i][m.col]))
+          : data[i].slice(1).filter(v => typeof v === 'number');
+        if (vals.length > 0 && result[key].length === 0) {
+          result[key] = vals;
+        }
+        break;
       }
     }
   }
-  return null;
-}
 
-/**
- * Парсит числа из строки, возвращает массив нужной длины
- */
-function parseNumbers(arr, maxLen) {
-  const result = [];
-  for (let i = 0; i < arr.length && result.length < maxLen; i++) {
-    const v = arr[i];
-    if (v === '' || v === null || v === undefined) continue;
-    const n = parseFloat(v.toString().replace(/[^\d.-]/g, ''));
-    if (!isNaN(n)) result.push(n);
+  // Calculate derived margins
+  if (result.revenue.length > 0 && result.var_costs.length > 0) {
+    const gross = result.revenue.map((v, i) => v - (result.var_costs[i] || 0));
+    if (result.margin_pct.length === 0)
+      result.margin_pct = result.revenue.map((v, i) => v > 0 ? +(gross[i]/v*100).toFixed(2) : 0);
   }
-  // Дополняем нулями если не хватает
-  while (result.length < maxLen) result.push(0);
-  return result;
+  if (result.revenue.length > 0 && result.op_profit.length > 0) {
+    if (result.op_margin_pct.length === 0)
+      result.op_margin_pct = result.revenue.map((v, i) =>
+        v > 0 ? +(result.op_profit[i]/v*100).toFixed(2) : 0);
+  }
+  if (result.revenue.length > 0 && result.net_profit.length > 0) {
+    if (result.np_margin_pct.length === 0)
+      result.np_margin_pct = result.revenue.map((v, i) =>
+        v > 0 ? +(result.net_profit[i]/v*100).toFixed(2) : 0);
+  }
 }
 
-function round2(n) {
-  return Math.round(n * 100) / 100;
+// ── READ CASH FLOW / ДДС ──────────────────────────────────────
+function readCashflow(report, result) {
+  const ss = getSheetById(report.sheet_id);
+  if (!ss) return;
+  const sheet = getSheetByName(ss, report.sheet_name);
+  if (!sheet) return;
+
+  const data = sheet.getDataRange().getValues();
+  const KEYS = {
+    ncf_op:    ['операцион', 'operating', 'от операционн'],
+    ncf_inv:   ['инвестиц', 'invest', 'от инвестиц'],
+    ncf_fin:   ['финанс', 'financ', 'от финансов'],
+    dividends: ['дивид', 'dividend'],
+    cash:      ['остаток', 'баланс', 'cash balance', 'остат денег', 'конечный остаток'],
+  };
+
+  extractRows(data, KEYS, result);
 }
 
-// ============================================================
-// СОХРАНЕНИЕ ПРИМЕЧАНИЙ
-// ============================================================
-function addNote(note) {
+// ── READ BALANCE ──────────────────────────────────────────────
+function readBalance(report, result) {
+  const ss = getSheetById(report.sheet_id);
+  if (!ss) return;
+  const sheet = getSheetByName(ss, report.sheet_name);
+  if (!sheet) return;
+
+  const data = sheet.getDataRange().getValues();
+  const KEYS = {
+    assets_total:  ['активы', 'assets total', 'баланс итого', 'итого активы', 'валюта баланса'],
+    equity:        ['капитал', 'equity', 'собственный капитал'],
+    liabilities:   ['обязательства', 'liabilit', 'итого обязательства'],
+    current_ratio: ['ликвидность', 'current ratio', 'текущая ликвидность'],
+    autonomy:      ['автоном', 'autonomy', 'коэф.*автоном'],
+    de_ratio:      ['d/e', 'долг/капит', 'долг к капиталу'],
+    dfl:           ['dfl', 'рычаг', 'финансовый рычаг'],
+  };
+
+  extractRows(data, KEYS, result);
+}
+
+// ── READ TRAFFIC / GM ─────────────────────────────────────────
+function readTraffic(report, result) {
+  const ss = getSheetById(report.sheet_id);
+  if (!ss) return;
+  const sheet = getSheetByName(ss, report.sheet_name);
+  if (!sheet) return;
+
+  const data = sheet.getDataRange().getValues();
+  const KEYS = {
+    crm_pct:       ['crm%', 'crm %', 'crm доля', 'доля crm'],
+    ftd_new:       ['ftd new', 'ftd нов', 'ftd новые'],
+    ftd_old:       ['ftd old', 'ftd баз', 'ftd crm', 'ftd базовые'],
+    rev_core:      ['core', 'кор', 'core revenue'],
+    rev_influence: ['influence', 'инфлюенс'],
+    rev_streams:   ['stream', 'стрим'],
+    rev_mannequin: ['mannequin', 'манекен'],
+    tr_fb:         ['facebook', 'fb бюд', 'fb budget'],
+    tr_tg:         ['telegram', 'tg бюд', 'tg budget'],
+  };
+
+  extractRows(data, KEYS, result);
+}
+
+// ── READ PAYMENT CALENDAR ─────────────────────────────────────
+function readPaymentCal(report, result) {
+  // Just log — dashboard uses its own payment_cal rendering from inline data
+  Logger.log('Payment calendar: ' + report.sheet_name + ' (read-only, not merged into result)');
+}
+
+// ── READ ROADMAP ЦКП ──────────────────────────────────────────
+function readRoadmapCkp(report, result) {
+  const ss = getSheetById(report.sheet_id);
+  if (!ss) return;
+
+  // Try sheet names in order of likelihood
+  const candidates = [report.sheet_name, '3 ЦКП', 'ЦКП', '3ЦКП'].filter(Boolean);
+  let sheet = null;
+  for (const n of candidates) {
+    sheet = ss.getSheetByName(n);
+    if (sheet) break;
+  }
+  if (!sheet) { Logger.log('readRoadmapCkp: sheet not found'); return; }
+
+  const data = sheet.getDataRange().getValues();
+
+  // Find the row that has period header names (янв, фев, etc.)
+  let periodRow = -1;
+  let periodCols = []; // [{idx, label}]
+  for (let i = 0; i < Math.min(6, data.length); i++) {
+    const row = data[i];
+    row.forEach((c, j) => {
+      if (/^(янв|фев|мар|апр|май|июн|июл|авг|сен|окт|ноя|дек)/i.test(String(c))) {
+        if (periodRow < 0) periodRow = i;
+        periodCols.push({ idx: j, label: String(c) });
+      }
+    });
+    if (periodRow >= 0) break;
+  }
+  if (periodRow < 0 || periodCols.length === 0) {
+    Logger.log('readRoadmapCkp: period row not found');
+    return;
+  }
+
+  const blocks = [];
+  let currentBlock = null;
+
+  for (let i = periodRow + 1; i < data.length; i++) {
+    const row = data[i];
+    const col0 = String(row[0] || '').trim();
+    const col1 = String(row[1] || '').trim();
+
+    // Skip fully empty rows
+    if (!col0 && !col1) continue;
+
+    if (/^ЦКП\s*\d/i.test(col0)) {
+      // Block header: col0 = "ЦКП N", col1 = "NAME"
+      currentBlock = {
+        id:       col0,
+        name:     col1,
+        statuses: periodCols.map(p => String(row[p.idx] || '')),
+        criteria: []
+      };
+      blocks.push(currentBlock);
+    } else if (currentBlock) {
+      // Sub-criterion row: col1 is the criterion name (col0 is empty or sub-label)
+      const label = col1 || col0;
+      if (label) {
+        currentBlock.criteria.push({
+          name:   label,
+          values: periodCols.map(p => {
+            const v = row[p.idx];
+            return (v === '' || v === null || v === undefined) ? null : v;
+          })
+        });
+      }
+    }
+  }
+
+  result.roadmap_ckp = {
+    periods: periodCols.map(p => p.label),
+    blocks:  blocks
+  };
+  Logger.log('readRoadmapCkp: loaded ' + blocks.length + ' blocks');
+}
+
+// ── READ ROADMAP TASKS (АИ) ───────────────────────────────────
+function readRoadmapTasks(report, result) {
+  const ss = getSheetById(report.sheet_id);
+  if (!ss) return;
+
+  const candidates = [report.sheet_name, 'АИ', 'АИ (задачи)', 'Tasks'].filter(Boolean);
+  let sheet = null;
+  for (const n of candidates) {
+    sheet = ss.getSheetByName(n);
+    if (sheet) break;
+  }
+  if (!sheet) { Logger.log('readRoadmapTasks: sheet not found'); return; }
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return;
+
+  // Map headers to column indices
+  const headers = data[0].map(h => String(h).toLowerCase().trim());
+  const col = {};
+  headers.forEach((h, i) => {
+    if (h.includes('№') || (h.includes('встреч') && !h.includes('дата')))   col.id           = i;
+    if (h.includes('дата') && h.includes('встреч'))                          col.date_meeting = i;
+    if (h.includes('проект'))                                                 col.project      = i;
+    if (h.includes('задач') && !h.includes('под'))                           col.task_type    = i;
+    if (h.includes('подзадач'))                                               col.subtask      = i;
+    if (h.includes('ответствен'))                                             col.responsible  = i;
+    if (h.includes('дата') && h.includes('план'))                            col.date_plan    = i;
+    if (h.includes('дата') && (h.includes('факт') || h.includes('исполн'))) col.date_fact    = i;
+    if (h.includes('статус'))                                                 col.status       = i;
+    if (h.includes('результат'))                                              col.result       = i;
+  });
+
+  const tasks = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const taskType = col.task_type !== undefined ? String(row[col.task_type] || '').trim() : '';
+    if (!taskType) continue; // skip blank rows
+
+    tasks.push({
+      id:           col.id           !== undefined ? row[col.id]           : i,
+      date_meeting: formatRoadmapDate(col.date_meeting !== undefined ? row[col.date_meeting] : null),
+      project:      col.project      !== undefined ? String(row[col.project]      || '') : '',
+      task_type:    taskType,
+      subtask:      col.subtask      !== undefined ? String(row[col.subtask]      || '') : '',
+      responsible:  col.responsible  !== undefined ? String(row[col.responsible]  || '') : '',
+      date_plan:    formatRoadmapDate(col.date_plan  !== undefined ? row[col.date_plan]  : null),
+      date_fact:    formatRoadmapDate(col.date_fact  !== undefined ? row[col.date_fact]  : null),
+      status:       col.status       !== undefined ? String(row[col.status]       || '') : '',
+      result:       col.result       !== undefined ? String(row[col.result]       || '') : ''
+    });
+  }
+
+  result.roadmap_tasks = tasks;
+  Logger.log('readRoadmapTasks: loaded ' + tasks.length + ' tasks');
+}
+
+function formatRoadmapDate(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    return val.getFullYear() + '-' +
+           String(val.getMonth() + 1).padStart(2, '0') + '-' +
+           String(val.getDate()).padStart(2, '0');
+  }
+  return String(val);
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function extractRows(data, KEYS, result) {
+  for (const [key, keywords] of Object.entries(KEYS)) {
+    for (let i = 0; i < data.length; i++) {
+      const label = String(data[i][0] || '').toLowerCase();
+      if (keywords.some(k => label.includes(k))) {
+        const vals = data[i].slice(1).filter(v => v !== '' && v !== null)
+          .map(v => toNum(v));
+        if (vals.length > 0 && result[key] && result[key].length === 0) {
+          result[key] = vals;
+        }
+        break;
+      }
+    }
+  }
+}
+
+function getSheetById(sheetId) {
   try {
-    const config = SpreadsheetApp.openById(CONFIG_SHEET_ID);
-    const sheet = config.getSheetByName('Notes');
-    if (!sheet) return { ok: false, error: 'Notes sheet not found' };
-
-    sheet.appendRow([
-      note.report_id || '',
-      note.month || new Date().toISOString().slice(0, 7),
-      note.chart_id || '',
-      note.text || '',
-      new Date().toISOString()
-    ]);
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err.toString() };
+    const id = extractSheetId(sheetId);
+    return SpreadsheetApp.openById(id);
+  } catch(e) {
+    Logger.log('Cannot open sheet: ' + sheetId + ' — ' + e.message);
+    return null;
   }
 }
 
-// ============================================================
-// ТЕСТОВАЯ ФУНКЦИЯ (запускать вручную для отладки)
-// ============================================================
-function testProxy() {
-  const result = getAllData();
-  Logger.log(JSON.stringify(result).slice(0, 2000));
-  return result;
+function getSheetByName(ss, name) {
+  // Handle template substitution: {month}, {year}, {month_name}
+  const m = getAnalysisMonth();
+  const y = getAnalysisYear();
+  const resolved = name
+    .replace(/{month}/g,      String(m))
+    .replace(/{year}/g,       String(y))
+    .replace(/{month_name}/g, getMonthName(m));
+  return ss.getSheetByName(resolved) || ss.getSheetByName(name);
+}
+
+function extractSheetId(urlOrId) {
+  const match = String(urlOrId).match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : String(urlOrId);
+}
+
+function getSheetData(sheet) {
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return [];
+  const headers = values[0].map(h => String(h).toLowerCase().trim().replace(/\s+/g,'_'));
+  return values.slice(1).filter(row => row.some(c => c !== '')).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = row[i]; });
+    return obj;
+  });
+}
+
+function isMonth(val) {
+  if (!val) return false;
+  const s = String(val).toLowerCase();
+  return /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|янв|фев|мар|апр|май|июн|июл|авг|сен|окт|ноя|дек)/.test(s)
+    || /^\d{4}-\d{2}$/.test(s)
+    || (val instanceof Date);
+}
+
+function formatMonth(val) {
+  if (val instanceof Date) {
+    const names = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+    return names[val.getMonth()] + ' ' + val.getFullYear();
+  }
+  return String(val);
+}
+
+function toNum(v) {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') {
+    const n = parseFloat(v.replace(/[, ]/g, '').replace('%',''));
+    return isNaN(n) ? 0 : n;
+  }
+  return 0;
+}
+
+function getAnalysisMonth() {
+  try {
+    const ss = SpreadsheetApp.openById(DASHBOARD_CONFIG_ID);
+    const sheet = ss.getSheetByName('Допущения') || ss.getSheetByName('Assumptions');
+    if (!sheet) return new Date().getMonth() + 1;
+    const data = getSheetData(sheet);
+    const row = data.find(r => {
+      const k = String(r.key || r.parameter || r.параметр || r.ключ || '').toLowerCase();
+      return k.includes('analysis_month') || k.includes('месяц');
+    });
+    return row ? parseInt(row.value || row.значение || row.val) : new Date().getMonth() + 1;
+  } catch(e) { return new Date().getMonth() + 1; }
+}
+
+function getAnalysisYear() {
+  try {
+    const ss = SpreadsheetApp.openById(DASHBOARD_CONFIG_ID);
+    const sheet = ss.getSheetByName('Допущения') || ss.getSheetByName('Assumptions');
+    if (!sheet) return new Date().getFullYear();
+    const data = getSheetData(sheet);
+    const row = data.find(r => {
+      const k = String(r.key || r.parameter || r.параметр || r.ключ || '').toLowerCase();
+      return k.includes('analysis_year') || k.includes('год');
+    });
+    return row ? parseInt(row.value || row.значение || row.val) : new Date().getFullYear();
+  } catch(e) { return new Date().getFullYear(); }
+}
+
+function getMonthName(m) {
+  const names = ['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  return names[m] || String(m);
+}
+
+function getThresholdRules(ss) {
+  try {
+    const sheet = ss.getSheetByName('Threshold Rules');
+    return sheet ? getSheetData(sheet) : [];
+  } catch(e) { return []; }
+}
+
+function getAssumptions(ss) {
+  try {
+    const sheet = ss.getSheetByName('Допущения') || ss.getSheetByName('Assumptions');
+    return sheet ? getSheetData(sheet) : [];
+  } catch(e) { return []; }
+}
+
+function getNotes(ss) {
+  try {
+    const sheet = ss.getSheetByName('Notes');
+    return sheet ? getSheetData(sheet) : [];
+  } catch(e) { return []; }
+}
+
+function getAiAnalysis(ss) {
+  try {
+    const sheet = ss.getSheetByName('AI Analysis');
+    if (!sheet) return null;
+    const data = getSheetData(sheet);
+    const latest = data.sort((a,b) => new Date(b.date||b.дата) - new Date(a.date||a.дата))[0];
+    return latest || null;
+  } catch(e) { return null; }
+}
+
+function getConfig() {
+  const ss = SpreadsheetApp.openById(DASHBOARD_CONFIG_ID);
+  return {
+    reports:     getSheetData(ss.getSheetByName('Reports') || ss.getSheets()[0]),
+    rules:       getThresholdRules(ss),
+    assumptions: getAssumptions(ss),
+  };
 }

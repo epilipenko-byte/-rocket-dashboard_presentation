@@ -798,9 +798,11 @@ const TABS = [
   { id:'model',      label:'Модель'       },
   { id:'calendar',   label:'Плат. календарь'},
   { id:'tasks',      label:'Задачи'       },
-  { id:'ckp',        label:'ЦКП'          },
-  { id:'results',    label:'Результаты'   },
-  { id:'ai',         label:'Выводы ✦'     },
+  { id:'ckp',           label:'ЦКП'              },
+  { id:'roadmap_ckp',   label:'Дорожная ЦКП'    },
+  { id:'roadmap_tasks', label:'Дорожная задачи'  },
+  { id:'results',       label:'Результаты'       },
+  { id:'ai',            label:'Выводы ✦'         },
 ];
 
 /* ═══════════════════════════════════════════════
@@ -997,9 +999,11 @@ function renderCurrentTab() {
     case 'model':      renderModel(d); break;
     case 'calendar':   renderCalendar(d); break;
     case 'tasks':      renderTasks(d); break;
-    case 'ckp':        renderCKP(d); break;
-    case 'results':    renderResults(d); break;
-    case 'ai':         renderAITab(d); break;
+    case 'ckp':           renderCKP(d); break;
+    case 'roadmap_ckp':   renderRoadmapCKP(d); break;
+    case 'roadmap_tasks': renderRoadmapTasks(d); break;
+    case 'results':       renderResults(d); break;
+    case 'ai':            renderAITab(d); break;
   }
 }
 
@@ -2239,6 +2243,345 @@ function renderCKP(d) {
       label:'Чистая прибыль ($)', data:np2,
       backgroundColor: np2.map(v=>v>=0?c('purple',0.65):'rgba(248,113,113,0.65)'), borderWidth:0
     }]}
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: ROADMAP ЦКП (live data)
+═══════════════════════════════════════════════ */
+function renderRoadmapCKP(d) {
+  const p = document.getElementById('panel-roadmap_ckp');
+  const ckp = d.roadmap_ckp;
+
+  if (!ckp || !ckp.blocks || !ckp.blocks.length) {
+    p.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:12px">📊</div>
+      <div style="font-size:14px">Данные ЦКП не загружены.<br>
+      Добавьте строку <b>roadmap_ckp</b> в Dashboard Config → Reports<br>
+      с указанием Sheet ID и Sheet Name «3 ЦКП».</div></div>`;
+    return;
+  }
+
+  const periods = ckp.periods || [];
+  const lastIdx = periods.length - 1;
+
+  // Color palette per block
+  const blockColors = ['var(--accent)','var(--purple)','var(--green)','#f59e0b','#06b6d4','#e879f9'];
+  const blockEmoji  = ['💰','💎','🌿','🛡️','📈','⭐'];
+
+  // Status dot
+  function statusBadge(s) {
+    const ok = /^да$/i.test(String(s).trim());
+    const no = /^нет$/i.test(String(s).trim());
+    const empty = !s || String(s).trim() === '';
+    if (empty) return `<span style="color:var(--muted);font-size:11px">—</span>`;
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;
+      background:${ok?'rgba(34,197,94,0.18)':no?'rgba(239,68,68,0.18)':'rgba(251,191,36,0.15)'};
+      color:${ok?'#4ade80':no?'#f87171':'#fbbf24'}">${String(s).trim()}</span>`;
+  }
+
+  // Format a criterion value
+  function fmtVal(v) {
+    if (v === null || v === undefined || v === '') return '<span style="color:var(--muted)">—</span>';
+    const s = String(v).trim();
+    if (/^(да|нет)$/i.test(s)) return statusBadge(v);
+    if (typeof v === 'number' && Math.abs(v) >= 1000)
+      return `<span style="color:var(--fg)">${fmtFull(v)}</span>`;
+    return `<span style="color:var(--fg)">${s}</span>`;
+  }
+
+  const summaryCards = ckp.blocks.map((blk, bi) => {
+    const latestStatus = (blk.statuses || [])[lastIdx] || '';
+    const isOk = /^да$/i.test(latestStatus);
+    const color = blockColors[bi % blockColors.length];
+    return `<div class="kpi-card" style="border-color:${color}20">
+      <div style="font-size:22px;margin-bottom:6px">${blockEmoji[bi] || '●'}</div>
+      <div style="font-size:12px;color:${color};font-weight:700;letter-spacing:.5px">${blk.id}</div>
+      <div style="font-size:14px;font-weight:700;margin:4px 0 8px">${blk.name}</div>
+      <div>${statusBadge(latestStatus)}</div>
+    </div>`;
+  }).join('');
+
+  const blocksHtml = ckp.blocks.map((blk, bi) => {
+    const color = blockColors[bi % blockColors.length];
+    const emoji = blockEmoji[bi] || '●';
+
+    // Period status row
+    const statusRow = periods.map((per, pi) => {
+      const st = (blk.statuses || [])[pi] || '';
+      return `<span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;min-width:52px">
+        <span style="font-size:10px;color:var(--muted)">${per}</span>
+        ${statusBadge(st)}
+      </span>`;
+    }).join('');
+
+    // Criteria table rows
+    const criteriaRows = (blk.criteria || []).map(cr => {
+      const lastVal = (cr.values || []).filter(v => v !== null && v !== undefined && v !== '').slice(-1)[0];
+      const isNeg = lastVal !== null && /^нет$/i.test(String(lastVal).trim());
+      return `<tr style="${isNeg ? 'background:rgba(239,68,68,0.06)' : ''}">
+        <td style="padding:7px 12px;font-size:12px;color:var(--fg);min-width:260px;border-bottom:1px solid rgba(255,255,255,0.05)">${cr.name}</td>
+        ${(cr.values || []).map(v => `<td style="padding:7px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px">${fmtVal(v)}</td>`).join('')}
+      </tr>`;
+    }).join('');
+
+    return `
+    <div class="chart-card" style="margin-bottom:18px;border-left:3px solid ${color}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <span style="font-size:20px">${emoji}</span>
+        <span style="font-size:15px;font-weight:700;color:${color}">${blk.id} — ${blk.name}</span>
+        <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${statusRow}</span>
+      </div>
+      ${criteriaRows ? `
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr>
+            <th style="padding:6px 12px;text-align:left;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid rgba(255,255,255,0.1)">Критерий</th>
+            ${periods.map(per=>`<th style="padding:6px 10px;text-align:center;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid rgba(255,255,255,0.1)">${per}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>${criteriaRows}</tbody>
+      </table></div>` : '<div style="color:var(--muted);font-size:12px">Нет данных</div>'}
+    </div>`;
+  }).join('');
+
+  p.innerHTML = `
+  <div style="margin-bottom:6px;color:var(--muted);font-size:12px">
+    Данные из Google Sheets · ${periods.length} периодов · ${ckp.blocks.length} блоков ЦКП
+  </div>
+  <div class="kpi-row" style="margin-bottom:24px">${summaryCards}</div>
+  ${blocksHtml}`;
+}
+
+/* ═══════════════════════════════════════════════
+   TAB: ROADMAP TASKS (live data)
+═══════════════════════════════════════════════ */
+// Starred tasks persisted in localStorage
+function getStarredTasks() {
+  try { return JSON.parse(localStorage.getItem('rkt_starred_tasks') || '{}'); }
+  catch(e) { return {}; }
+}
+function saveStarredTasks(obj) {
+  localStorage.setItem('rkt_starred_tasks', JSON.stringify(obj));
+}
+
+function renderRoadmapTasks(d) {
+  const p = document.getElementById('panel-roadmap_tasks');
+  const tasks = d.roadmap_tasks;
+
+  if (!tasks || !tasks.length) {
+    p.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:12px">📋</div>
+      <div style="font-size:14px">Данные задач не загружены.<br>
+      Добавьте строку <b>roadmap_tasks</b> в Dashboard Config → Reports<br>
+      с Sheet Name «АИ».</div></div>`;
+    return;
+  }
+
+  const starred = getStarredTasks();
+  const months  = (state.data && state.data.months && state.data.months.length) ? state.data.months : ['Май 2026'];
+
+  // Current analysis period from state
+  const analysisMonth = (state.data && state.data.assumptions)
+    ? (() => {
+        const a = state.data.assumptions.find(r => {
+          const k = String(r.key || r.parameter || r.параметр || r.ключ || '').toLowerCase();
+          return k.includes('analysis_month') || k.includes('месяц');
+        });
+        return a ? parseInt(a.value || a.значение || a.val) : 5;
+      })()
+    : 5;
+  const analysisYear = (state.data && state.data.assumptions)
+    ? (() => {
+        const a = state.data.assumptions.find(r => {
+          const k = String(r.key || r.parameter || r.параметр || r.ключ || '').toLowerCase();
+          return k.includes('analysis_year') || k.includes('год');
+        });
+        return a ? parseInt(a.value || a.значение || a.val) : 2026;
+      })()
+    : 2026;
+
+  // Parse date string "YYYY-MM-DD" or Date object
+  function parseDate(s) {
+    if (!s) return null;
+    if (typeof s === 'string' && s.includes('-')) {
+      const parts = s.split('-');
+      return { year: parseInt(parts[0]), month: parseInt(parts[1]), day: parseInt(parts[2]) };
+    }
+    return null;
+  }
+
+  function isCompletedInMonth(task, m, y) {
+    const st = String(task.status || '').toLowerCase();
+    if (!st.includes('выполнен')) return false;
+    const dt = parseDate(task.date_fact);
+    if (!dt) return false;
+    return dt.month === m && dt.year === y;
+  }
+
+  function isManDecision(task) {
+    const t = String(task.task_type || '').toLowerCase();
+    return t.includes('менеджмент') || t.includes('decision') || t.includes('management');
+  }
+
+  // Partition current-month tasks
+  const currentMonthTasks  = tasks.filter(t => {
+    // include tasks that are completed this month OR planned this month
+    const dtFact = parseDate(t.date_fact);
+    const dtPlan = parseDate(t.date_plan);
+    const completedNow = isCompletedInMonth(t, analysisMonth, analysisYear);
+    const plannedNow = dtPlan && dtPlan.month === analysisMonth && dtPlan.year === analysisYear;
+    return completedNow || plannedNow;
+  });
+
+  // All unique task months (for grouping)
+  const monthGroups = {};
+  tasks.forEach(t => {
+    const dtFact = parseDate(t.date_fact);
+    const dtPlan = parseDate(t.date_plan);
+    const dt = dtFact || dtPlan;
+    if (!dt) return;
+    const key = dt.year + '-' + String(dt.month).padStart(2,'0');
+    if (!monthGroups[key]) monthGroups[key] = { year: dt.year, month: dt.month, tasks: [] };
+    monthGroups[key].tasks.push(t);
+  });
+
+  // Sort groups newest first
+  const sortedGroups = Object.values(monthGroups).sort((a,b) =>
+    b.year !== a.year ? b.year - a.year : b.month - a.month
+  );
+
+  const RU_MONTHS = ['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+  // Starred tasks split
+  const starredDoneIds = Object.keys(starred).filter(id => starred[id] === true);
+  const starredTasks = tasks.filter(t => starredDoneIds.includes(String(t.id)));
+  const starredCompleted = starredTasks.filter(t => isCompletedInMonth(t, analysisMonth, analysisYear));
+  const starredInProgress = starredTasks.filter(t => !isCompletedInMonth(t, analysisMonth, analysisYear));
+
+  function taskRow(task, inStarredBlock) {
+    const id = String(task.id);
+    const isStarred = !!starred[id];
+    const isCompleted = isCompletedInMonth(task, analysisMonth, analysisYear);
+    const isManDec = isManDecision(task);
+    const statusText = String(task.status || '').trim();
+    const subtask = String(task.subtask || task.task_type || '').trim();
+
+    return `<div class="roadmap-task-row ${isCompleted ? 'task-done' : ''} ${isManDec ? 'task-mandec' : ''}"
+      data-taskid="${id}" style="
+        display:flex;align-items:flex-start;gap:10px;padding:9px 14px;
+        border-radius:8px;margin-bottom:4px;cursor:pointer;
+        background:${isManDec ? 'rgba(251,191,36,0.06)' : 'rgba(255,255,255,0.03)'};
+        border:1px solid ${isManDec ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.06)'};
+        transition:background .15s;
+        ${isCompleted ? 'opacity:0.75' : ''}
+      ">
+      <input type="checkbox" class="task-star-cb" data-taskid="${id}"
+        ${isStarred ? 'checked' : ''}
+        style="margin-top:2px;cursor:pointer;accent-color:var(--yellow);flex-shrink:0"
+        title="Добавить в важные">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          ${isManDec ? '<span style="font-size:10px;background:rgba(251,191,36,0.15);color:var(--yellow);padding:1px 6px;border-radius:4px;font-weight:700">МД</span>' : ''}
+          <span style="font-size:12px;color:var(--muted);flex-shrink:0">${task.task_type}</span>
+        </div>
+        <div style="font-size:13px;color:var(--fg);margin-top:3px;line-height:1.4">${subtask || task.task_type}</div>
+        ${task.responsible ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${task.responsible}</div>` : ''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        ${statusText ? `<div style="font-size:11px;padding:2px 7px;border-radius:8px;
+          background:${isCompleted ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.07)'};
+          color:${isCompleted ? '#4ade80' : 'var(--muted)'}">${statusText}</div>` : ''}
+        ${task.date_fact ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">✓ ${task.date_fact}</div>` : ''}
+        ${!task.date_fact && task.date_plan ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">план ${task.date_plan}</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  function groupByType(taskList) {
+    // Менеджмент Decision first, then others by type
+    const manDec = taskList.filter(t => isManDecision(t));
+    const others = taskList.filter(t => !isManDecision(t));
+    const types = {};
+    others.forEach(t => {
+      const tp = t.task_type || 'Прочее';
+      if (!types[tp]) types[tp] = [];
+      types[tp].push(t);
+    });
+
+    let html = '';
+    if (manDec.length) {
+      const done = manDec.filter(t => isCompletedInMonth(t, analysisMonth, analysisYear));
+      const todo = manDec.filter(t => !isCompletedInMonth(t, analysisMonth, analysisYear));
+      html += `<div style="font-size:11px;color:var(--yellow);font-weight:700;margin:10px 0 6px;letter-spacing:.5px">
+        ⚡ МЕНЕДЖМЕНТ DECISION</div>`;
+      html += [...done, ...todo].map(t => taskRow(t)).join('');
+    }
+
+    Object.entries(types).forEach(([type, tlist]) => {
+      const done = tlist.filter(t => isCompletedInMonth(t, analysisMonth, analysisYear));
+      const todo = tlist.filter(t => !isCompletedInMonth(t, analysisMonth, analysisYear));
+      html += `<div style="font-size:11px;color:var(--muted);font-weight:600;margin:10px 0 6px;letter-spacing:.3px">${type}</div>`;
+      html += [...done, ...todo].map(t => taskRow(t)).join('');
+    });
+    return html;
+  }
+
+  // Build starred top block
+  const starredBlockHtml = (starredCompleted.length || starredInProgress.length) ? `
+  <div class="chart-card" style="margin-bottom:20px;border-left:3px solid var(--yellow)">
+    <div style="font-size:14px;font-weight:700;color:var(--yellow);margin-bottom:14px">⭐ Важные задачи</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#4ade80;margin-bottom:8px;letter-spacing:.5px">✓ ВЫПОЛНИЛИ</div>
+        ${starredCompleted.length
+          ? starredCompleted.map(t => taskRow(t, true)).join('')
+          : '<div style="color:var(--muted);font-size:12px">Нет выполненных</div>'}
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--yellow);margin-bottom:8px;letter-spacing:.5px">↻ В РАБОТЕ</div>
+        ${starredInProgress.length
+          ? starredInProgress.map(t => taskRow(t, true)).join('')
+          : '<div style="color:var(--muted);font-size:12px">Нет активных</div>'}
+      </div>
+    </div>
+  </div>` : '';
+
+  // Build month groups
+  const groupsHtml = sortedGroups.map(grp => {
+    const isCurrent = grp.month === analysisMonth && grp.year === analysisYear;
+    const title = `${RU_MONTHS[grp.month]} ${grp.year}`;
+    return `
+    <div class="chart-card" style="margin-bottom:16px;${isCurrent ? 'border-left:3px solid var(--accent)' : ''}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:14px;font-weight:700;color:${isCurrent ? 'var(--accent)' : 'var(--fg)'}">${title}</span>
+        ${isCurrent ? '<span style="font-size:11px;background:rgba(74,222,128,0.12);color:var(--accent);padding:2px 8px;border-radius:6px">Текущий</span>' : ''}
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">${grp.tasks.length} задач</span>
+      </div>
+      ${groupByType(grp.tasks)}
+    </div>`;
+  }).join('');
+
+  p.innerHTML = `
+  <div style="margin-bottom:6px;color:var(--muted);font-size:12px">
+    Данные: ${RU_MONTHS[analysisMonth]} ${analysisYear} · ${tasks.length} задач всего
+    <span style="margin-left:12px;font-size:11px;color:var(--muted)">☑ Отмечайте задачи галочкой — они появятся в блоке «Важные»</span>
+  </div>
+  ${starredBlockHtml}
+  ${groupsHtml}`;
+
+  // Wire checkbox events
+  p.querySelectorAll('.task-star-cb').forEach(cb => {
+    cb.addEventListener('change', function(e) {
+      e.stopPropagation();
+      const tid = this.getAttribute('data-taskid');
+      const starred2 = getStarredTasks();
+      if (this.checked) starred2[tid] = true;
+      else delete starred2[tid];
+      saveStarredTasks(starred2);
+      renderRoadmapTasks(d);
+    });
   });
 }
 
