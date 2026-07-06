@@ -11,11 +11,12 @@ import {dof} from 'three/addons/tsl/display/DepthOfFieldNode.js';
 const BC=120000,FS=30;
 const scene=new THREE.Scene();
 scene.background=new THREE.Color('#000000');
-scene.fog=new THREE.FogExp2('#000000',.045);
+scene.fog=new THREE.FogExp2('#000000',.035);
 
-const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,100);
-camera.position.set(0,1.8,11);
-camera.lookAt(0,0.5,0);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,120);
+// ИСПРАВЛЕНО: камера убрана назад (z=20 вместо z=11), меньше угловых артефактов
+camera.position.set(0,3,20);
+camera.lookAt(0,0.3,0);
 
 const renderer=new THREE.WebGPURenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
@@ -27,7 +28,7 @@ await renderer.init();
 
 const bladeData=instancedArray(BC,'vec4'),bendState=instancedArray(BC,'vec4'),bladeBound=instancedArray(BC,'float');
 const windSpeed=uniform(1.2),windAmplitude=uniform(.19),bladeWidth=uniform(4),bladeTipWidth=uniform(.19),bladeHeight=uniform(1.6),bladeHeightVariation=uniform(.5),bladeLean=uniform(1.1),noiseAmplitude=uniform(1.85),noiseFrequency=uniform(.3),noise2Amplitude=uniform(.2),noise2Frequency=uniform(15),bladeColorVariation=uniform(.93),grassDensity=uniform(1);
-const fogStart=uniform(6),fogEnd=uniform(11),fogIntensity=uniform(1),fogColor=uniform(new THREE.Color('#000'));
+const fogStart=uniform(6),fogEnd=uniform(13),fogIntensity=uniform(1),fogColor=uniform(new THREE.Color('#000'));
 const bladeBaseColor=uniform(new THREE.Color().setRGB(.004,.013,.001));
 const bladeTipColor=uniform(new THREE.Color().setRGB(.577,.479,.051));
 const goldenTipColor=uniform(new THREE.Color().setRGB(.658,.479,.040));
@@ -132,7 +133,7 @@ grassMat.colorNode=Fn(()=>{
 grassMat.opacityNode=Fn(()=>{
   const b=bladeData.element(instanceIndex);
   const d=sqrt(b.x.mul(b.x).add(b.y.mul(b.y)));
-  return smoothstep(float(0),float(.1),uv().y).mul(float(1).sub(smoothstep(float(10),float(14),d)))
+  return smoothstep(float(0),float(.1),uv().y).mul(float(1).sub(smoothstep(float(11),float(15),d)))
 })();
 grassMat.transparent=true;
 
@@ -155,7 +156,8 @@ const dl=new THREE.DirectionalLight(0xfff4e0,1.5);dl.position.set(5,10,7);scene.
 const pp=new THREE.PostProcessing(renderer);
 const sp=pass(scene,camera);sp.setMRT(mrt({output:output,normal:transformedNormalView}));
 const sc2=sp.getTextureNode('output'),svz=sp.getViewZNode();
-const focusDist=uniform(18),focalLen=uniform(22),bokehScale=uniform(5);
+// ИСПРАВЛЕНО: focusDist увеличен до 16 (фокус на траве при камере z=20)
+const focusDist=uniform(16),focalLen=uniform(22),bokehScale=uniform(4);
 pp.outputNode=innerWidth<768?sc2:dof(sc2,svz,focusDist,focalLen,bokehScale);pp.needsUpdate=true;
 
 window.addEventListener('resize',()=>{
@@ -201,8 +203,9 @@ function animate(){
   const dt=Math.min(clock.getDelta(),.05);
   camT+=dt*.12;
   camera.position.x=Math.sin(camT*.4)*.5;
-  camera.position.y=1.8+Math.sin(camT*.25)*.15;
-  camera.lookAt(0,0.5,0);
+  // ИСПРАВЛЕНО: базовая высота камеры 3.0 (было 1.8)
+  camera.position.y=3.0+Math.sin(camT*.25)*.15;
+  camera.lookAt(0,0.3,0);
   renderer.compute(computeUpdate);
   pp.render();
 }
