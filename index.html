@@ -57,11 +57,11 @@ body{font-family:'Outfit',sans-serif;background:transparent;color:var(--text);mi
 .tab:hover{color:var(--text)}
 .tab.active{color:#22d3ee;border-bottom-color:#22d3ee;text-shadow:0 0 12px rgba(34,211,238,.3)}
 /* CONTENT */
-.content{padding:20px 32px 60px;background:linear-gradient(180deg,rgba(10,14,23,.7) 0%,rgba(10,14,23,.5) 50%,rgba(10,14,23,.7) 100%);border-radius:0}
+.content{padding:20px 32px 60px;background:linear-gradient(180deg,rgba(8,11,20,.92) 0%,rgba(8,11,20,.88) 50%,rgba(8,11,20,.92) 100%);border-radius:0}
 .pane{display:none}.pane.active{display:block}
 /* KPI */
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
-.kpi{background:rgba(10,14,23,.22);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:16px 18px;transition:all .4s;position:relative;overflow:hidden}
+.kpi{background:rgba(10,14,23,.72);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:16px 18px;transition:all .4s;position:relative;overflow:hidden}
 .kpi:hover{border-color:var(--border-hover);background:var(--surface2);transform:translateY(-2px)}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent-dim);opacity:.4}
 .kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px}
@@ -71,7 +71,7 @@ body{font-family:'Outfit',sans-serif;background:transparent;color:var(--text);mi
 /* CHARTS */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
-.card{background:rgba(10,14,23,.22);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:18px 20px;transition:border-color .3s;position:relative}
+.card{background:rgba(10,14,23,.75);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:18px 20px;transition:border-color .3s;position:relative}
 .card:hover{border-color:var(--border-hover)}
 .card.full{grid-column:1/-1}
 .card-title{font-family:'Outfit',sans-serif;font-weight:400;font-size:15px;margin-bottom:12px;color:var(--text);display:flex;align-items:center;gap:8px}
@@ -87,7 +87,7 @@ table.dt td:first-child{text-align:left;font-family:'Outfit',sans-serif;font-wei
 table.dt tr.tot td{font-weight:700;border-top:2px solid var(--border);padding-top:8px}
 table.dt tr:hover td{background:rgba(167,139,250,.03)}
 /* ANALYSIS */
-.asec{background:rgba(10,14,23,.22);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:24px 28px;margin-bottom:16px}
+.asec{background:rgba(10,14,23,.75);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:24px 28px;margin-bottom:16px}
 .asec h3{font-family:'Outfit',sans-serif;font-weight:400;font-size:18px;margin-bottom:14px;color:var(--text)}
 .finding{margin-bottom:16px;padding-left:0}
 .finding-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-right:6px}
@@ -212,11 +212,13 @@ table.dt tr:hover td{background:rgba(167,139,250,.03)}
 // DATA_PROXY_URL: вставьте URL вашего Google Apps Script Web App
 // Получить: Расширения → Apps Script → Развернуть → Веб-приложение → Скопировать URL
 const C={
-  DATA_PROXY:'https://script.google.com/macros/s/AKfycbxHphPAsDe6o2vvhgjmZx51CZ151J1pvuc93QxjT8hfKuAHzcVcIvKdwOAIKQBYluSl/exec',   // Apps Script Web App
-  AI:'WEBHOOK_AI_ANALYSIS_URL',               // ← Make.com AI Analysis webhook (опционально)
+  DATA_PROXY:'https://script.google.com/macros/s/AKfycbxHphPAsDe6o2vvhgjmZx51CZ151J1pvuc93QxjT8hfKuAHzcVcIvKdwOAIKQBYluSl/exec',
+  AI:'WEBHOOK_AI_ANALYSIS_URL',
   TOOLS:'https://script.google.com/macros/s/AKfycbwxYcEODuv8V9XIuXpyJ6giQOE8pXpHZITkznxqzTSuLef4HYlY1eHdwaBOvAvO8Sbh/exec',
+  TM:'https://script.google.com/a/macros/rocketpeople.tech/s/AKfycbxTers8chtwgwkIh5cDNJI-9McA6Rj0GPSywQey0g3ygKqKSTaB9ZS8P2e5s7nopzWa/exec',
+  CONFIG_SHEET:'https://docs.google.com/spreadsheets/d/1EKR-czK1UvXZDIJUe5MLb70yZXyEMe1VIYTx15UOY3E/edit',
   PWD_HASH:'5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
-  DEMO: false   // LIVE mode — Apps Script deployed 01.06.2026
+  DEMO: false
 };
 
 // ===== AUTH =====
@@ -235,9 +237,9 @@ const TABS=[
 {id:'payment',label:'Плат.календарь',v:true},
 {id:'traffic',label:'Трафик',v:true},
 {id:'ckp',label:'ЦКП',v:true},
-{id:'tasks',label:'Задачи',v:true},
 {id:'results',label:'Результаты',v:true},
 {id:'conclusions',label:'Выводы',v:true},
+{id:'tech_sheet',label:'Тех.лист',v:true},
 ];
 function buildTabs(){
   const tb=document.getElementById('tabbar'),mn=document.getElementById('main');
@@ -540,12 +542,22 @@ function init(){
 function render(){
   document.getElementById('ptag').textContent=plbl();
   renderOverview();renderPnL();renderPnLCombo();renderPnLConsol();renderModel();
-  renderCF();renderBalance();renderPayment();renderTraffic();renderCKP();renderTasks();
-  renderResults();renderConclusions();
+  renderCF();renderBalance();renderPayment();renderTraffic();renderCKP();
+  renderResults();renderConclusions();renderTechSheet();
+  // Немедленно показываем активный таб (без ожидания IntersectionObserver)
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.pane.active [data-reveal]').forEach(el=>el.classList.add('revealed'));
+  });
+  // IntersectionObserver для неактивных табов
   document.querySelectorAll('[data-reveal]:not(.revealed)').forEach(el=>{
-    const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){el.classList.add('revealed');obs.unobserve(el)}})},{threshold:.1});
+    const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){el.classList.add('revealed');obs.unobserve(el)}})},{threshold:.05});
     obs.observe(el);
   });
+  // При переключении таба — раскрыть его элементы
+  document.getElementById('tabbar').addEventListener('click',e=>{
+    if(!e.target.classList.contains('tab'))return;
+    setTimeout(()=>{document.querySelectorAll('.pane.active [data-reveal]:not(.revealed)').forEach(el=>el.classList.add('revealed'))},80);
+  },{once:false});
 }
 
 // ===== OVERVIEW =====
@@ -761,33 +773,71 @@ function renderTraffic(){
 
 // ===== CKP =====
 function renderCKP(){
-  let html=`<div class="asec" data-reveal><h3>📋 ЦКП — Дорожная карта Rocket Project 2026</h3>`;
-  if(D.ckp_data&&Array.isArray(D.ckp_data)&&D.ckp_data.length>1){
-    html+=renderRawTable(D.ckp_data,'ckp_tbl');
-    // Попытка построить диаграмму статусов
-    const hdrCkp=D.ckp_data[0].map(h=>String(h||'').toLowerCase().trim());
-    const iStatCkp=(()=>{for(const n of['статус','status','состо']){const i=hdrCkp.findIndex(h=>h.includes(n));if(i>=0)return i;}return 2})();
-    const rows=D.ckp_data.slice(1);
-    const statuses={done:0,wip:0,late:0,todo:0};
-    rows.forEach(r=>{
-      const s=String(r[iStatCkp]||r[iStatCkp+1]||'').toLowerCase();
-      if(s.includes('выполн')||s.includes('done')||s.includes('завер')||s.includes('готов'))statuses.done++;
-      else if(s.includes('работ')||s.includes('wip')||s.includes('прогресс'))statuses.wip++;
-      else if(s.includes('просроч')||s.includes('late')||s.includes('задерж'))statuses.late++;
-      else statuses.todo++;
-    });
-    html+=`</div><div class="card" style="max-width:400px;margin-top:16px" data-reveal><div class="card-title"><span class="dot" style="background:var(--green)"></span>Статусы задач ЦКП</div><div class="cw short"><canvas id="c-ckp-status"></canvas></div></div>`;
-    document.getElementById('p-ckp').innerHTML=html;
-    mc('c-ckp-status',{type:'doughnut',data:{labels:['Выполнено','В работе','Просрочено','Не начато'],datasets:[{data:[statuses.done,statuses.wip,statuses.late,statuses.todo],backgroundColor:['rgba(52,211,153,.5)','rgba(251,146,60,.5)','rgba(248,113,113,.5)','rgba(100,116,139,.3)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10}}}},cutout:'50%'}});
-  } else {
-    html+=`<p style="color:var(--text-dim);font-size:12px">Данные загружаются из Google Sheets «Дорожная карта 2026», лист ЦКП.<br>Нажмите «Обновить данные» для загрузки актуальных данных.</p></div>`;
-    document.getElementById('p-ckp').innerHTML=html;
+  const el=document.getElementById('p-ckp');
+  if(!D.ckp_data||!Array.isArray(D.ckp_data)||D.ckp_data.length<2){
+    el.innerHTML=`<div class="asec" data-reveal><h3>📋 ЦКП — Ключевые показатели</h3><p style="color:var(--text-dim);font-size:12px">Данные загружаются из Google Sheets «Дорожная карта 2026». Нажмите «Обновить данные».</p></div>`;
+    return;
   }
+  const rows=D.ckp_data;
+  const hdr=rows[0].map(h=>String(h||'').toLowerCase().trim());
+  const iCkp=hdr.findIndex(h=>h.includes('цкп')||h.includes('ckp')||h.includes('проект')||h.includes('группа'));
+  const iStat=hdr.findIndex(h=>h.includes('статус')||h.includes('status'));
+  // Группируем по ЦКП-колонке или по строкам-заголовкам
+  const groups={};const groupOrder=[];
+  rows.slice(1).filter(r=>r.some(c=>c!==''&&c!==null&&c!==undefined)).forEach(r=>{
+    let ckpKey=iCkp>=0?String(r[iCkp]||'').trim():'';
+    // Если нет ЦКП-колонки — ищем строки где первая ячейка содержит "ЦКП"
+    if(!ckpKey)ckpKey=String(r[0]||'').trim().match(/цкп\s*\d+/i)?String(r[0]).trim():'ЦКП';
+    if(!groups[ckpKey]){groups[ckpKey]=[];groupOrder.push(ckpKey);}
+    // Не добавляем строку-заголовок ЦКП, только данные
+    const isHeaderRow=String(r[0]||'').trim().match(/^цкп\s*\d+$/i)&&r.slice(1).every(c=>!c||c==='');
+    if(!isHeaderRow)groups[ckpKey].push(r);
+  });
+  let fullHtml='';
+  groupOrder.forEach((ckpName,gi)=>{
+    const grpRows=groups[ckpName].filter(r=>r.some(c=>c!==''&&c!==null&&c!==undefined));
+    if(!grpRows.length)return;
+    const cid=`c-ckp-${gi}`;
+    const stats={done:0,wip:0,late:0,todo:0};
+    grpRows.forEach(r=>{
+      const s=String(iStat>=0?r[iStat]:r[r.length-1]||'').toLowerCase();
+      if(s.includes('выполн')||s.includes('done')||s.includes('завер')||s.includes('готов'))stats.done++;
+      else if(s.includes('работ')||s.includes('wip')||s.includes('прогресс'))stats.wip++;
+      else if(s.includes('просроч')||s.includes('late')||s.includes('задерж'))stats.late++;
+      else stats.todo++;
+    });
+    const total=grpRows.length||1;
+    const donePct=Math.round(stats.done/total*100);
+    // Таблица
+    let tbl=`<table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr>`;
+    rows[0].forEach((h,ci)=>{if(h!==''&&h!==null&&h!==undefined)tbl+=`<th style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.08);color:var(--text-dim);text-align:left;font-weight:500;white-space:nowrap">${h}</th>`;});
+    tbl+=`</tr></thead><tbody>`;
+    grpRows.forEach(r=>{
+      const s=String(iStat>=0?r[iStat]:r[r.length-1]||'').toLowerCase();
+      let sc='color:var(--text)';
+      if(s.includes('выполн')||s.includes('done'))sc='color:rgba(52,211,153,.9)';
+      else if(s.includes('работ')||s.includes('wip'))sc='color:rgba(251,146,60,.9)';
+      else if(s.includes('просроч')||s.includes('late'))sc='color:rgba(248,113,113,.9)';
+      tbl+=`<tr style="border-bottom:1px solid rgba(255,255,255,.04)">`;
+      rows[0].forEach((_,ci)=>{if(rows[0][ci]!==''&&rows[0][ci]!==null&&rows[0][ci]!==undefined)tbl+=`<td style="padding:5px 8px;${ci===iStat?sc:''}">${r[ci]||''}</td>`;});
+      tbl+=`</tr>`;
+    });
+    tbl+=`</tbody></table>`;
+    fullHtml+=`<div class="asec" data-reveal style="margin-bottom:20px"><h3>📋 ${ckpName}<span style="font-size:11px;font-weight:400;color:var(--text-dim);margin-left:12px">${donePct}% выполнено · ${grpRows.length} метрик</span></h3><div style="display:grid;grid-template-columns:1fr 180px;gap:16px;align-items:start"><div style="overflow-x:auto">${tbl}</div><div class="card" style="padding:10px"><div style="font-size:10px;color:var(--text-dim);margin-bottom:8px">Статусы</div><div class="cw short"><canvas id="${cid}"></canvas></div></div></div></div>`;
+  });
+  el.innerHTML=fullHtml||`<div class="asec" data-reveal><h3>📋 ЦКП</h3><p style="color:var(--text-dim);font-size:12px">Нет данных.</p></div>`;
+  // Строим диаграммы после вставки HTML в DOM
+  groupOrder.forEach((ckpName,gi)=>{
+    const grpRows=groups[ckpName];
+    const stats={done:0,wip:0,late:0,todo:0};
+    grpRows.forEach(r=>{const s=String(iStat>=0?r[iStat]:r[r.length-1]||'').toLowerCase();if(s.includes('выполн')||s.includes('done'))stats.done++;else if(s.includes('работ')||s.includes('wip'))stats.wip++;else if(s.includes('просроч')||s.includes('late'))stats.late++;else stats.todo++;});
+    if(Object.values(stats).some(v=>v>0))mc(`c-ckp-${gi}`,{type:'doughnut',data:{labels:['Выполнено','В работе','Просрочено','Не начато'],datasets:[{data:[stats.done,stats.wip,stats.late,stats.todo],backgroundColor:['rgba(52,211,153,.5)','rgba(251,146,60,.5)','rgba(248,113,113,.5)','rgba(100,116,139,.3)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'60%'}});
+  });
 }
 
-// ===== TASKS =====
-function renderTasks(){
-  let html=`<div class="asec" data-reveal><h3>✅ Свод по задачам</h3>`;
+// ===== TASKS (внутренняя утилита, вызывается из renderResults) =====
+function _buildTasksHtml(){
+  let html=`<div class="asec" data-reveal><h3>✅ Задачи — Дорожная карта</h3>`;
   if(D.tasks_data&&Array.isArray(D.tasks_data)&&D.tasks_data.length>1){
     const rows=D.tasks_data;
     // Ищем индексы по НАЗВАНИЮ заголовка, а не по позиции (защита от перестановки столбцов)
@@ -816,21 +866,22 @@ function renderTasks(){
     const stats={done:0,wip:0,late:0,todo:0};
     dataRows.forEach(r=>{const s=String(iStat>=0?r[iStat]:r[2]||'').toLowerCase();if(s.includes('выполн')||s.includes('done')||s.includes('завер')||s.includes('готов'))stats.done++;else if(s.includes('работ')||s.includes('wip')||s.includes('прогресс'))stats.wip++;else if(s.includes('просроч')||s.includes('late'))stats.late++;else stats.todo++;});
     html+=`</div><div class="card" style="max-width:360px;margin-top:16px" data-reveal><div class="card-title"><span class="dot" style="background:var(--green)"></span>Статусы задач</div><div class="cw short"><canvas id="c-tasks-status"></canvas></div></div>`;
-    document.getElementById('p-tasks').innerHTML=html;
-    mc('c-tasks-status',{type:'doughnut',data:{labels:['Выполнено '+stats.done,'В работе '+stats.wip,'Просрочено '+stats.late,'Не начато '+stats.todo],datasets:[{data:[stats.done,stats.wip,stats.late,stats.todo],backgroundColor:['rgba(52,211,153,.5)','rgba(251,146,60,.5)','rgba(248,113,113,.5)','rgba(100,116,139,.3)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10}}}},cutout:'50%'}});
-    return;
+    return {html,stats};
   } else {
-    html+=`<p style="color:var(--text-dim);font-size:12px">Источник: Дорожная карта Rocket Project 2026 — лист «свод по задачам».<br>Статусы: выполнено / в работе / просрочено / не начато.</p>`;
+    html+=`<p style="color:var(--text-dim);font-size:12px">Источник: Дорожная карта Rocket Project 2026 — лист «свод по задачам».</p>`;
   }
   html+=`</div>`;
-  document.getElementById('p-tasks').innerHTML=html;
+  return {html,stats:null};
 }
 
-// ===== RESULTS =====
+// ===== RESULTS (объединяет: 2 блока-ссылки + задачи + пороговые показатели) =====
 function renderResults(){
   const npS=sm(D.net_profit),revS=sm(D.revenue),i=li();
   const npm=npS/revS*100;
   const cashDays=D.cash[i]/(revS/D.months.length/30);
+  // Получаем динамические ссылки из GAS-конфига (если есть), иначе из C
+  const toolsUrl=(D.dashboard_links&&D.dashboard_links.tools)||C.TOOLS;
+  const tmUrl=(D.dashboard_links&&D.dashboard_links.tm)||C.TM;
   const ths=[
     {m:'Рентабельность ЧП',v:F.pct(npm),s:npm<10?'alert':npm<15?'warning':'ok',t:npm<10?'Ниже целевого':npm<15?'В зоне внимания':'В целевом',r:1},
     {m:'Операционная маржа',v:F.pct(sm(D.op_profit)/revS*100),s:sm(D.op_profit)/revS<.08?'alert':sm(D.op_profit)/revS<.15?'warning':'ok',t:sm(D.op_profit)/revS<.08?'Критически низкая':'Ниже целевой',r:4},
@@ -860,18 +911,31 @@ function renderResults(){
     });
   }
   let thHtml=ths.map(t=>`<div class="th-item ${t.s}"><div class="th-dot"></div><div><div class="th-lbl">${t.m}: ${t.v} ${t.r?'<span class="basis">#'+t.r+'</span>':''}</div><div class="th-txt">${t.t}</div></div></div>`).join('');
-  let toolsHtml=`<div style="color:var(--text-dim);font-size:11px;margin-bottom:10px">Данные из Google Apps Script · <a href="${C.TOOLS}" target="_blank" style="color:var(--accent);text-decoration:underline">Открыть ↗</a></div><div class="embed-card" id="tools-embed"><div style="color:var(--text-dim);font-size:11px;padding:20px;text-align:center">Загрузка данных о внедрённости инструментов...</div></div>`;
+  // Строим задачи (бывшая вкладка "Задачи")
+  const {html:tasksHtml,stats:taskStats}=_buildTasksHtml();
   document.getElementById('p-results').innerHTML=`
-<div class="asec" data-reveal><h3>🔧 Внедрённость инструментов</h3>${toolsHtml}</div>
+<div class="grid2" style="margin-bottom:20px" data-reveal>
+  <div class="card" style="text-align:center;cursor:pointer;border-color:rgba(34,211,238,.25)" onclick="window.open('${toolsUrl}','_blank')">
+    <div class="card-title"><span class="dot" style="background:var(--accent)"></span>📊 Внедрённость инструментов</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.6">Дашборд охвата и использования инструментов командой Rocket</p>
+    <a href="${toolsUrl}" target="_blank" class="btn btn-glow" style="display:inline-flex;margin:0 auto;padding:10px 20px;font-size:11px" onclick="event.stopPropagation()">Открыть ↗</a>
+  </div>
+  <div class="card" style="text-align:center;cursor:pointer;border-color:rgba(167,139,250,.25)" onclick="window.open('${tmUrl}','_blank')">
+    <div class="card-title"><span class="dot" style="background:var(--purple)"></span>✅ Тайм-менеджмент и задачи</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.6">Дашборд выполнения задач и управления временем команды</p>
+    <a href="${tmUrl}" target="_blank" class="btn" style="display:inline-flex;margin:0 auto;padding:10px 20px;font-size:11px;border-color:rgba(167,139,250,.4);color:var(--purple)" onclick="event.stopPropagation()">Открыть ↗</a>
+  </div>
+</div>
+${tasksHtml}
 <div class="asec" data-reveal><h3>📊 Пороговые показатели (${ths.length} правил)</h3><div class="th-grid">${thHtml}</div></div>
 <div class="kpi-row" data-reveal style="margin-top:16px">
-  <div class="kpi"><div class="kpi-label">Маржа ЧП (цель 40%)</div><div class="kpi-val">${F.pct(npm)}</div><div class="kpi-sub dn">цель Алексей</div></div>
+  <div class="kpi"><div class="kpi-label">Маржа ЧП</div><div class="kpi-val">${F.pct(npm)}</div><div class="kpi-sub dn">цель ≥40%</div></div>
   <div class="kpi"><div class="kpi-label">ROE (мес)</div><div class="kpi-val">${F.pct(D.roe_monthly[i]*100)}</div><div class="kpi-sub nt">цель ≥10%</div></div>
-  <div class="kpi"><div class="kpi-label">ROA (мес)</div><div class="kpi-val">${F.pct(D.roa_monthly[i]*100)}</div><div class="kpi-sub nt">цель 5-20%</div></div>
+  <div class="kpi"><div class="kpi-label">ROA (мес)</div><div class="kpi-val">${F.pct(D.roa_monthly[i]*100)}</div><div class="kpi-sub nt">цель 5–20%</div></div>
   <div class="kpi"><div class="kpi-label">Автономия</div><div class="kpi-val">${D.autonomy[i].toFixed(2)}</div><div class="kpi-sub ${D.autonomy[i]<.3?'dn':'up'}">цель ≥0.40</div></div>
   <div class="kpi"><div class="kpi-label">Кэш-дней</div><div class="kpi-val">${cashDays.toFixed(1)}</div><div class="kpi-sub ${cashDays<5?'dn':'wr'}">цель ≥15</div></div>
 </div>`;
-  fetch(C.TOOLS).then(r=>r.text()).then(html=>{const el=document.getElementById('tools-embed');if(el)el.innerHTML=html}).catch(()=>{});
+  if(taskStats){mc('c-tasks-status',{type:'doughnut',data:{labels:['Выполнено '+taskStats.done,'В работе '+taskStats.wip,'Просрочено '+taskStats.late,'Не начато '+taskStats.todo],datasets:[{data:[taskStats.done,taskStats.wip,taskStats.late,taskStats.todo],backgroundColor:['rgba(52,211,153,.5)','rgba(251,146,60,.5)','rgba(248,113,113,.5)','rgba(100,116,139,.3)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10}}}},cutout:'50%'}});}
 }
 
 // ===== CONCLUSIONS =====
@@ -925,6 +989,76 @@ ${aiHtml}
   <div class="finding"><span class="finding-num" style="color:var(--red)">🔮</span><strong>Прогноз.</strong><p>Без ПВТ стоимость капитала останется 19%+ → DFL продолжит быть отрицательным.</p></div>
   <div class="rec str"><h4>🎯 Решение: Регистрация юрлица в ПВТ</h4><p>IP-портфель (НМА $468K) достаточен для квалификации. Горизонт: 3–6 мес. Стоимость капитала 19% → 7–9%, экономия $80–120K/год.</p><div class="basis">Стратегический · НМА из Баланса · Допущение: ПВТ-резиденты iGaming получают ставки 5–9%</div></div>
 </div>`;
+}
+
+// ===== TECH SHEET =====
+function renderTechSheet(){
+  const el=document.getElementById('p-tech_sheet');
+  if(!el)return;
+  // Блок: конфигурация
+  const cfgRows=[
+    ['GAS Data Proxy',C.DATA_PROXY],
+    ['Инструменты',C.TOOLS],
+    ['Тайм-менеджмент',C.TM],
+    ['Dashboard Config',C.CONFIG_SHEET],
+  ];
+  let cfgHtml=`<table style="width:100%;border-collapse:collapse;font-size:11px">`;
+  cfgRows.forEach(([k,v])=>{
+    const isUrl=v&&v.startsWith('http');
+    cfgHtml+=`<tr style="border-bottom:1px solid rgba(255,255,255,.05)"><td style="padding:6px 10px;color:var(--text-dim);white-space:nowrap;min-width:180px;width:180px">${k}</td><td style="padding:6px 10px;word-break:break-all">${isUrl?`<a href="${v}" target="_blank" style="color:var(--accent)">${v.length>90?v.substring(0,90)+'…':v} ↗</a>`:v}</td></tr>`;
+  });
+  cfgHtml+=`</table>`;
+  // Блок: состояние данных
+  const dataKeys=[['revenue','Выручка'],['net_profit','ЧП'],['cash','Кэш'],['months','Месяцы'],['thresholds','Пороги'],['ckp_data','ЦКП'],['tasks_data','Задачи'],['traffic_data','Трафик'],['errors','Ошибки']];
+  let stHtml=`<div class="kpi-row" style="flex-wrap:wrap;gap:10px;margin-top:8px">`;
+  dataKeys.forEach(([k,lbl])=>{
+    const v=D[k];const ok=Array.isArray(v)?v.length>0:v!==undefined&&v!==null&&v!=='';
+    stHtml+=`<div class="kpi" style="min-width:110px;flex:0 0 auto"><div class="kpi-label" style="font-size:9px">${lbl}</div><div class="kpi-val" style="font-size:12px;color:${ok?'var(--green)':'rgba(248,113,113,.8)'}">${ok?'✓':'✗'}</div></div>`;
+  });
+  stHtml+=`</div>`;
+  // Блок: данные config_data (листы Dashboard Config)
+  let cfgBlocksHtml='';
+  if(D.config_data&&Array.isArray(D.config_data)&&D.config_data.length>0){
+    cfgBlocksHtml=`<div class="asec" data-reveal style="margin-top:16px"><h3>📄 Dashboard Config — листы</h3>`;
+    D.config_data.forEach(block=>{
+      if(!block||!block.sheet)return;
+      cfgBlocksHtml+=`<div style="margin-bottom:20px"><div style="font-size:10px;font-weight:600;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">${block.sheet}</div>`;
+      if(block.rows&&Array.isArray(block.rows)&&block.rows.length>0){
+        cfgBlocksHtml+=`<table style="width:100%;border-collapse:collapse;font-size:10px">`;
+        block.rows.forEach((row,ri)=>{
+          const isHdr=ri===0;
+          cfgBlocksHtml+=`<tr style="border-bottom:1px solid rgba(255,255,255,.04)">`;
+          row.forEach(cell=>{
+            const val=String(cell||'');const isLink=val.startsWith('http');
+            const style=isHdr?'padding:4px 8px;color:var(--text-dim);font-weight:500':'padding:4px 8px';
+            cfgBlocksHtml+=`<td style="${style}">${isLink?`<a href="${val}" target="_blank" style="color:var(--accent)">${val.length>55?val.substring(0,55)+'…':val} ↗</a>`:val}</td>`;
+          });
+          cfgBlocksHtml+=`</tr>`;
+        });
+        cfgBlocksHtml+=`</table>`;
+      }
+      cfgBlocksHtml+=`</div>`;
+    });
+    cfgBlocksHtml+=`</div>`;
+  }
+  // Блок: ошибки в обратном порядке (новые сверху)
+  let errHtml='';
+  const errs=Array.isArray(D.errors)&&D.errors.length>0?[...D.errors].reverse():[];
+  if(errs.length>0){
+    errHtml=`<div class="asec" data-reveal style="margin-top:16px"><h3>⚠️ Ошибки (${errs.length}) — новые сверху</h3>`;
+    errs.forEach(e=>{
+      const ts=e.timestamp||e.ts||'';const msg=e.message||e.msg||String(e);
+      const sev=(e.severity||e.level||'error').toLowerCase();
+      const col=sev.includes('warn')?'rgba(251,146,60,.8)':'rgba(248,113,113,.8)';
+      errHtml+=`<div style="border-left:2px solid ${col};padding:6px 12px;margin-bottom:6px;font-size:11px">${ts?`<span style="color:var(--text-dim);font-size:10px;margin-right:8px">${ts}</span>`:''}<span style="color:var(--text)">${msg}</span></div>`;
+    });
+    errHtml+=`</div>`;
+  }
+  el.innerHTML=`
+<div class="asec" data-reveal><h3>⚙️ Конфигурация системы <a href="${C.CONFIG_SHEET}" target="_blank" style="font-size:11px;color:var(--accent);font-weight:400;margin-left:12px">Редактировать Dashboard Config ↗</a></h3>${cfgHtml}</div>
+<div class="asec" data-reveal style="margin-top:16px"><h3>🔌 Состояние данных</h3>${stHtml}</div>
+${cfgBlocksHtml}
+${errHtml||'<div class="asec" data-reveal style="margin-top:16px"><h3>✅ Ошибок нет</h3><p style="color:var(--text-dim);font-size:12px">Все данные загружены без ошибок.</p></div>'}`;
 }
 
 // ===== HELPER: RENDER RAW TABLE FROM 2D ARRAY =====
