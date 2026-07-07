@@ -21,7 +21,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Outfit',sans-serif;background:transparent;color:var(--text);min-height:100vh}
 /* AUTH */
-#auth{display:flex;align-items:center;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at 30% 20%,rgba(167,139,250,.04) 0%,transparent 60%),var(--bg)}
+#auth{display:flex;align-items:center;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at 30% 20%,rgba(167,139,250,.04) 0%,transparent 60%),var(--bg);position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999}
 .auth-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:380px;text-align:center}
 .auth-box h2{font-family:'Outfit',sans-serif;font-weight:800;font-size:28px;color:var(--accent);margin-bottom:8px}
 .auth-box p{font-size:12px;color:var(--text-dim);margin-bottom:24px;letter-spacing:1px}
@@ -31,7 +31,7 @@ body{font-family:'Outfit',sans-serif;background:transparent;color:var(--text);mi
 .auth-box button:hover{background:rgba(167,139,250,.35)}
 .auth-err{color:var(--red);font-size:11px;margin-top:6px;display:none}
 /* MAIN */
-#app{display:none}
+#app{display:none;position:relative;z-index:9999;will-change:transform}
 .hdr{padding:18px 32px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:100;background:rgba(10,14,23,.93)}
 .hdr-left{display:flex;align-items:center;gap:14px}
 .hdr h1{font-family:'Outfit',sans-serif;font-size:28px;font-weight:800;letter-spacing:-1px;display:flex;align-items:baseline;gap:4px}
@@ -324,69 +324,122 @@ function sm(a){return sl(a).reduce((s,v)=>s+(+v||0),0)}
 function gm(){return sl(D.months)}
 function li(){return pTo}
 function pi(){return pTo>0?pTo-1:null}
-function plbl(){const yr=D.year||2026;return pFrom===pTo?D.months[pFrom]+' '+yr:D.months[pFrom]+'—'+D.months[pTo]+' '+yr}
+function plbl(){
+  const yr=D.year||2026;
+  const janIdx=D.months.findIndex(m=>m==='Янв');
+  const yrF=(janIdx>0&&pFrom<janIdx)?yr-1:yr;
+  const yrT=(janIdx>0&&pTo<janIdx)?yr-1:yr;
+  const mF=D.months[pFrom]||'',mT=D.months[pTo]||'';
+  if(pFrom===pTo)return mF+' '+yrF;
+  if(yrF===yrT)return mF+'–'+mT+' '+yrT;
+  return mF+' '+yrF+'–'+mT+' '+yrT;
+}
 
 // ===== DATA FETCH (Google Apps Script) =====
-let dataSource='demo';
-async function fetchData(){
-  show('Загрузка данных из Google Sheets...');
-  try{
-    const url=C.DATA_PROXY;
-    if(!url||url==='APPS_SCRIPT_URL_PLACEHOLDER'){
-      console.warn('Apps Script URL not configured, using demo data');
-      dataSource='demo';
-      render();hide();return;
-    }
-    // Apps Script Web App принимает GET с ?action=get_all
-    const r=await fetch(url+'?action=get_all',{method:'GET'});
-    const d=await r.json();
-    if(d&&d.ok){
-      // Мержим только числовые поля, сохраняем fallback для пустых
-      const fields=['months','revenue','var_costs','margin_pct','gross_margin_pct','op_margin_pct',
-        'np_margin_pct','op_profit','net_profit','traffic_cost','indirect','interest',
-        'ncf_op','ncf_inv','ncf_fin','dividends','cash','assets_total','equity','liabilities',
-        'lt_debt','st_debt','kz','current_ratio','abs_liquidity','fin_stability','autonomy',
-        'de_ratio','roe_monthly','roa_monthly','dfl','rev_core','rev_streams','rev_influence',
-        'rev_mannequin','tr_fb','tr_tg','tr_teasers','tr_influence','tr_pp','tr_google',
-        'ftd_old','ftd_new','ftd_total','crm_rev','crm_pct'];
-      if(d.year)D.year=d.year;
-      fields.forEach(f=>{
-  if(d[f]&&Array.isArray(d[f])&&d[f].length>0&&d[f].some(v=>v!==0&&v!==null&&v!==undefined))D[f]=d[f];
-  else if(d[f]&&Array.isArray(d[f])&&d[f].length>0&&!d[f].every(v=>!v))D[f]=d[f];
-});
-if(d.year)D.year=d.year;
-      // Метаданные
-      if(d.threshold_rules&&d.threshold_rules.length)D.thresholds=d.threshold_rules;
-      if(d.notes&&d.notes.length)D.notes=d.notes;
-      if(d.analysis)D.analysis=d.analysis;
-      if(d.assumptions)D.assumptions=d.assumptions;
-      if(d.pnl_combo)D.pnl_combo=d.pnl_combo;
-      if(d.pnl_consol)D.pnl_consol=d.pnl_consol;
-      if(d.model_data)D.model_data=d.model_data;
-      if(d.payment_data)D.payment_data=d.payment_data;
-      if(d.tasks_data)D.tasks_data=d.tasks_data;
-      if(d.ckp_data)D.ckp_data=d.ckp_data;
-      dataSource='live';
-      // Обновить период-селекторы если месяцев больше
-      if(D.months.length>5)updatePeriodSelectors();
-      localStorage.setItem('rocket_data',JSON.stringify(D));
-      localStorage.setItem('rocket_updated',new Date().toISOString());
-      document.getElementById('live-dot').classList.remove('offline');
-      const upd=document.getElementById('updated-at');
-      if(upd)upd.textContent='обновлено '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-    }else{
-      console.warn('Apps Script returned error:',d.error);
-      dataSource='demo';
-      document.getElementById('live-dot').classList.add('offline');
-    }
-  }catch(e){
-    console.warn('Apps Script unavailable, using cached/demo:',e);
-    dataSource='demo';
-    document.getElementById('live-dot').classList.add('offline');
-    const upd=document.getElementById('updated-at');
-    if(upd)upd.textContent='⚠ ошибка загрузки ('+e.message.slice(0,40)+')';
+let dataSource='cache';
+
+// Обрабатывает данные от GAS (общая логика для JSONP и fetch)
+function applyGASData(d){
+  const dot=document.getElementById('live-dot');
+  const upd=document.getElementById('updated-at');
+  if(!(d&&d.ok)){
+    console.warn('Apps Script error:',d&&d.error);
+    if(dot)dot.classList.add('offline');
+    if(upd)upd.textContent='⚠ ошибка API: '+(d&&d.error||'unknown');
+    return;
   }
-  render();hide();
+  const fields=['months','revenue','var_costs','margin_pct','gross_margin_pct','op_margin_pct',
+    'np_margin_pct','op_profit','net_profit','traffic_cost','indirect','interest',
+    'ncf_op','ncf_inv','ncf_fin','dividends','cash','assets_total','equity','liabilities',
+    'lt_debt','st_debt','kz','current_ratio','abs_liquidity','fin_stability','autonomy',
+    'de_ratio','roe_monthly','roa_monthly','dfl','rev_core','rev_streams','rev_influence',
+    'rev_mannequin','tr_fb','tr_tg','tr_teasers','tr_influence','tr_pp','tr_google',
+    'ftd_old','ftd_new','ftd_total','crm_rev','crm_pct'];
+  if(d.year)D.year=d.year;
+  fields.forEach(f=>{
+    if(d[f]&&Array.isArray(d[f])&&d[f].length>0)D[f]=d[f];
+  });
+  if(d.threshold_rules&&d.threshold_rules.length)D.thresholds=d.threshold_rules;
+  if(d.notes&&d.notes.length)D.notes=d.notes;
+  if(d.analysis)D.analysis=d.analysis;
+  if(d.assumptions)D.assumptions=d.assumptions;
+  if(d.pnl_combo)D.pnl_combo=d.pnl_combo;
+  if(d.pnl_consol)D.pnl_consol=d.pnl_consol;
+  if(d.model_data)D.model_data=d.model_data;
+  if(d.payment_data)D.payment_data=d.payment_data;
+  if(d.tasks_data)D.tasks_data=d.tasks_data;
+  if(d.ckp_data)D.ckp_data=d.ckp_data;
+  dataSource='live';
+  // Приводим pTo к минимальной длине массивов
+  const minLen=Math.min(
+    D.months.length,D.revenue.length,D.net_profit.length,D.var_costs.length,
+    D.cash.length,D.current_ratio.length,D.abs_liquidity.length,
+    D.fin_stability.length,D.de_ratio.length,D.autonomy.length
+  );
+  pTo=Math.min(D.months.length-1,minLen-1);
+  pFrom=Math.min(pFrom,pTo);
+  updatePeriodSelectors();
+  document.getElementById('pFrom').value=pFrom;
+  document.getElementById('pTo').value=pTo;
+  localStorage.setItem('rocket_data',JSON.stringify(D));
+  localStorage.setItem('rocket_updated',new Date().toISOString());
+  if(dot)dot.classList.remove('offline');
+  if(upd)upd.textContent='LIVE '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+  try{render();}catch(re){console.error('render error after live data:',re);}
+}
+
+// JSONP-загрузка: обходит CORS и file:// ограничения браузера
+// GAS должен поддерживать параметр ?callback= (возвращает JS, а не JSON)
+function fetchViaJSONP(url){
+  return new Promise(resolve=>{
+    const cbName='__gasCallback_'+Date.now();
+    const dot=document.getElementById('live-dot');
+    const upd=document.getElementById('updated-at');
+    if(upd)upd.textContent='↻ загрузка из Sheets...';
+    if(dot)dot.classList.remove('offline');
+
+    let done=false;
+    const timer=setTimeout(()=>{
+      if(done)return;done=true;
+      delete window[cbName];
+      if(script.parentNode)script.remove();
+      if(upd)upd.textContent='⚠ таймаут (GAS не ответил за 60с)';
+      if(dot)dot.classList.add('offline');
+      resolve(false);
+    },60000);
+
+    window[cbName]=function(d){
+      if(done)return;done=true;
+      clearTimeout(timer);
+      delete window[cbName];
+      if(script.parentNode)script.remove();
+      applyGASData(d);
+      resolve(true);
+    };
+
+    const script=document.createElement('script');
+    script.src=url+'?action=get_all&callback='+cbName+'&t='+Date.now();
+    script.onerror=()=>{
+      if(done)return;done=true;
+      clearTimeout(timer);
+      delete window[cbName];
+      if(upd)upd.textContent='⚠ ошибка загрузки GAS (проверь URL деплоя)';
+      if(dot)dot.classList.add('offline');
+      resolve(false);
+    };
+    document.head.appendChild(script);
+  });
+}
+
+async function fetchData(){
+  const url=C.DATA_PROXY;
+  if(!url||url==='APPS_SCRIPT_URL_PLACEHOLDER'){
+    const upd=document.getElementById('updated-at');
+    if(upd)upd.textContent='⚠ URL не настроен';
+    return;
+  }
+  // JSONP как основной метод — работает из file://, обходит CORS
+  await fetchViaJSONP(url);
 }
 
 async function fetchAI(){
@@ -402,15 +455,22 @@ async function fetchAI(){
 }
 
 function updatePeriodSelectors(){
-  const months=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const FULL={'Янв':'Январь','Фев':'Февраль','Мар':'Март','Апр':'Апрель',
+    'Май':'Май','Июн':'Июнь','Июл':'Июль','Авг':'Август',
+    'Сен':'Сентябрь','Окт':'Октябрь','Ноя':'Ноябрь','Дек':'Декабрь'};
+  const yr=D.year||2026;
+  // Январь — начало нового года; всё до него — предыдущий год
+  const janIdx=D.months.findIndex(m=>m==='Янв');
   ['pFrom','pTo'].forEach(id=>{
     const sel=document.getElementById(id);
     if(!sel)return;
-    sel.innerHTML=D.months.map((m,i)=>`<option value="${i}">${months[i]||m}</option>`).join('');
+    sel.innerHTML=D.months.map((m,i)=>{
+      const y=(janIdx>0&&i<janIdx)?yr-1:yr;
+      return`<option value="${i}">${FULL[m]||m} ${y}</option>`;
+    }).join('');
   });
-  document.getElementById('pFrom').value=0;
-  document.getElementById('pTo').value=D.months.length-1;
-  pFrom=0;pTo=D.months.length-1;
+  document.getElementById('pFrom').value=pFrom;
+  document.getElementById('pTo').value=pTo;
 }
 
 function show(t){document.getElementById('ld-txt').textContent=t;document.getElementById('ld').classList.add('on')}
@@ -450,10 +510,17 @@ function addNote(cid){
   render();
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.note-panel')&&!e.target.closest('.note-btn'))document.querySelectorAll('.note-panel.open').forEach(p=>p.classList.remove('open'))});
+// Пробрасываем координаты мыши в iframe с травой
+document.addEventListener('mousemove',e=>{
+  const fr=document.getElementById('grass-bg');
+  if(fr&&fr.contentWindow)fr.contentWindow.postMessage({type:'mousemove',clientX:e.clientX,clientY:e.clientY,w:innerWidth,h:innerHeight},'*');
+});
 
 // ===== DATA SOURCE BADGE =====
 function dsBadge(src){
-  return `<div class="ds-badge ${src==='live'?'live':'demo'}">${src==='live'?'● LIVE — Google Sheets':'○ DEMO — тестовые данные'}</div>`;
+  if(src==='live')return`<div class="ds-badge live">● LIVE — Google Sheets</div>`;
+  if(src==='cache')return`<div class="ds-badge" style="color:var(--yellow);border-color:rgba(251,191,36,.2)">○ КЭSH — последнее сохранение</div>`;
+  return`<div class="ds-badge demo">○ DEMO — тестовые данные</div>`;
 }
 
 // ===== INIT =====
@@ -464,7 +531,8 @@ function init(){
     const upd=localStorage.getItem('rocket_updated');
     if(upd){const el=document.getElementById('updated-at');if(el)el.textContent='кэш '+new Date(upd).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
   }catch(e){}
-  buildTabs();render();
+  buildTabs();render(); // Показываем дашборд сразу (с кэшем если есть)
+  hide(); // Скрываем оверлей сразу — данные подгрузятся в фоне
   if(!C.DEMO&&C.DATA_PROXY!=='APPS_SCRIPT_URL_PLACEHOLDER')fetchData();
 }
 
@@ -885,6 +953,8 @@ function renderRawTable(data,id){
 
 // ===== AUTO INIT =====
 if(C.DEMO){document.getElementById('auth').style.display='none';document.getElementById('app').style.display='block';init()}
+// Защитный таймер: если лоадер завис — скрыть через 25с
+setTimeout(()=>{const ld=document.getElementById('ld');if(ld&&ld.classList.contains('on'))ld.classList.remove('on')},25000);
 </script>
 </body>
 </html>
